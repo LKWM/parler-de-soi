@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Parler de soi - Leçon 2</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Tone.js for Sound Effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Hangul.js for Virtual Keyboard Composition -->
+    <script src="https://unpkg.com/hangul-js" type="text/javascript"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+        :root {
+            /* Dynamic sizing variables */
+            --unit: 1vmin; 
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .korean-text {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        #app-container {
+            background-color: white;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Desktop: 16:9 Ratio Container */
+        @media (min-width: 1024px) {
+            #app-container {
+                aspect-ratio: 16/9;
+                width: auto;
+                height: 100vh;
+                max-width: 177.78vh;
+                box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            }
+            html { font-size: 2.5vh; } 
+        }
+
+        /* Mobile */
+        @media (max-width: 1023px) {
+            #app-container {
+                width: 100%;
+                height: 100%;
+            }
+            html { font-size: 16px; }
+        }
+
+        .page-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(2vh, 4vmin, 4vh) clamp(2vw, 4vmin, 4vw);
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .card-box {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            padding: clamp(1.5rem, 4vmin, 3rem);
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            flex-shrink: 1;
+            max-height: 100%;
+            overflow-y: auto;
+        }
+
+        /* Keyboard Styles */
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+            gap: 0.5vmin;
+            margin-bottom: 0.5vmin;
+            width: 100%;
+        }
+        .key-btn {
+            background-color: #f3f4f6;
+            color: #374151;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 5vh;
+            font-family: 'Noto Sans KR', sans-serif;
+            font-size: clamp(0.8rem, 2vmin, 1.2rem);
+            box-shadow: 0 2px 0 #e5e7eb;
+            transition: all 0.1s;
+        }
+        .key-btn:active {
+            transform: translateY(2px);
+            box-shadow: none;
+            background-color: #e5e7eb;
+        }
+        .key-btn.special {
+            flex: 1.5;
+            background-color: #e0e7ff;
+            color: #4f46e5;
+        }
+        .key-btn.space {
+            flex: 4;
+        }
+
+        /* Typography & Utilities */
+        .text-fluid-xl { font-size: clamp(1.5rem, 5vmin, 4rem); }
+        .text-fluid-lg { font-size: clamp(1.2rem, 3.5vmin, 2.5rem); }
+        .text-fluid-base { font-size: clamp(1rem, 2.5vmin, 1.5rem); }
+        .text-fluid-sm { font-size: clamp(0.875rem, 2vmin, 1.25rem); }
+        .icon-fluid-md { font-size: clamp(1.5rem, 4vmin, 3rem); }
+        
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+        .nav-btn {
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        @media (min-width: 1024px) {
+            .nav-btn { width: 5rem; height: 5rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <!-- Header -->
+    <div id="header" class="absolute top-0 right-0 p-4 md:p-6 z-20 hidden">
+        <span id="page-indicator" class="font-mono text-gray-400 font-bold text-fluid-sm bg-gray-100 px-3 py-1 rounded-full">1 / 17</span>
+    </div>
+
+    <!-- Main Content -->
+    <div id="content-area" class="flex-grow flex flex-col items-center justify-center w-full h-full relative">
+        <!-- Content injected here -->
+    </div>
+
+    <!-- Footer Nav -->
+    <div id="footer" class="absolute bottom-0 w-full p-6 md:p-8 flex justify-between items-end z-20 pointer-events-none hidden">
+        <button id="btn-prev" class="nav-btn bg-gray-100 text-gray-500 hover:bg-gray-200 pointer-events-auto">
+            <i class="ph ph-arrow-left icon-fluid-md"></i>
+        </button>
+        <button id="btn-next" class="nav-btn bg-indigo-600 text-white hover:bg-indigo-700 pointer-events-auto">
+            <i class="ph ph-arrow-right icon-fluid-md"></i>
+        </button>
+    </div>
+</div>
+
+<script>
+    // --- Configuration ---
+    const pages = [
+        {
+            type: 'cover',
+            title: "Chapitre 1 : Demander et dire son nom",
+            subtitle: "Leçon 2 - Pratique de la lecture et de l'écriture",
+            buttonText: "Commencer"
+        },
+        {
+            type: 'choice',
+            question: "[ Prénom ]",
+            instruction: "Choisissez la bonne expression.",
+            options: ["성", "무엇", "이름", "이다"],
+            correct: "이름"
+        },
+        {
+            type: 'choice',
+            question: "[ Je ]",
+            instruction: "Choisissez la bonne expression.",
+            options: ["성", "저", "나", "제니", "주"],
+            correct: "저"
+        },
+        {
+            type: 'choice',
+            question: "Quelle particule utilise-t-on pour indiquer que 'Je' (저) est le seul sujet de la phrase ?",
+            instruction: "Choisissez la bonne particule.",
+            options: ["이", "가", "는", "은", "이다", "뭐"],
+            correct: "는"
+        },
+        {
+            type: 'choice',
+            question: "[ Quel est ]",
+            instruction: "Choisissez la bonne expression.",
+            options: ["무엇에요", "뭐예요", "누구예요", "이에요"],
+            correct: "뭐예요"
+        },
+        {
+            type: 'choice',
+            question: "[ 이름이 뭐예요? ]",
+            instruction: "Qu'est-ce que ça veut dire ?",
+            options: ["Qu’est-ce que c’est?", "Quel est votre prénom?", "Qui est-ce?"],
+            correct: "Quel est votre prénom?"
+        },
+        {
+            type: 'input',
+            question: "[ Quel est votre prénom? ]",
+            instruction: "Complétez la phrase.",
+            prompt: "______ 뭐예요?",
+            correct: "이름이",
+            hintAudio: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933257/sentence_1_nqvqxf.mp3" 
+        },
+        {
+            type: 'input',
+            question: "[ Quel est votre prénom? ]",
+            instruction: "Complétez la phrase.",
+            prompt: "_____________ ?",
+            correct: "이름이 뭐예요",
+            fullSentence: true,
+            hintAudio: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933257/sentence_1_nqvqxf.mp3"
+        },
+        {
+            type: 'choice',
+            question: "[ 저는 제니예요 ]",
+            instruction: "Qu'est-ce que ça veut dire ?",
+            options: ["Je suis Jennie.", "Elle est Jennie.", "J’ai Jennie."],
+            correct: "Je suis Jennie."
+        },
+        {
+            type: 'input',
+            question: "[ Je suis Emma ]",
+            instruction: "Complétez la phrase.",
+            prompt: "___ 엠마예요.",
+            correct: "저는",
+            hintAudio: "https://res.cloudinary.com/de76i94ia/video/upload/v1767081341/%E1%84%8B%E1%85%A6%E1%86%B7%E1%84%86%E1%85%A1_wuwwpb.mp3"
+        },
+        {
+            type: 'input',
+            question: "[ Je suis Emma ]",
+            instruction: "Complétez la phrase.",
+            prompt: "저는 엠마___",
+            correct: "예요",
+            hintAudio: "https://res.cloudinary.com/de76i94ia/video/upload/v1767081341/%E1%84%8B%E1%85%A6%E1%86%B7%E1%84%86%E1%85%A1_wuwwpb.mp3"
+        },
+        {
+            type: 'choice',
+            question: "[ 저는 요한이에요 ]",
+            instruction: "Qu'est-ce que ça veut dire ?",
+            options: ["C’est Yohan.", "Il s’appelle Yohan.", "Je suis Yohan."],
+            correct: "Je suis Yohan."
+        },
+        {
+            type: 'input',
+            question: "[ Je suis Jane ]",
+            instruction: "Complétez la phrase.",
+            prompt: "___ 제인이에요.",
+            correct: "저는",
+            hintAudio: "https://res.cloudinary.com/de76i94ia/video/upload/v1767081437/%E1%84%8C%E1%85%A6%E1%84%8B%E1%85%B5%E1%86%AB_eugxxo.mp3"
+        },
+        {
+            type: 'input',
+            question: "[ Je suis Jane ]",
+            instruction: "Complétez la phrase.",
+            prompt: "저는 제인___",
+            correct: "이에요",
+            hintAudio: "https://res.cloudinary.com/de76i94ia/video/upload/v1767081437/%E1%84%8C%E1%85%A6%E1%84%8B%E1%85%B5%E1%86%AB_eugxxo.mp3"
+        },
+        {
+            type: 'choice',
+            question: "Comment conjuguer 'être' (이다) si le prénom se termine par une voyelle ?",
+            instruction: "Choisissez la bonne forme.",
+            options: ["이에요", "예요", "이다", "이요"],
+            correct: "예요"
+        },
+        {
+            type: 'choice',
+            question: "Comment conjuguer 'être' (이다) si le prénom se termine par une consonne ?",
+            instruction: "Choisissez la bonne forme.",
+            options: ["이에요", "예요", "이다", "이요"],
+            correct: "이에요"
+        },
+        {
+            type: 'outro',
+            text: "Félicitations ! Pratiquez l'écoute et l'expression orale dans la Leçon 3 ! À bientôt !"
+        }
+    ];
+
+    // --- Audio Logic ---
+    let correctSound, errorSound, completionSynth, pageTurnSynth;
+    let audioContextInitialized = false;
+
+    async function initAudio() {
+        if (audioContextInitialized) return;
+        try {
+            await Tone.start();
+            correctSound = new Tone.Synth().toDestination();
+            errorSound = new Tone.Synth({
+                oscillator: { type: 'square' },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }
+            }).toDestination();
+            completionSynth = new Tone.PolySynth(Tone.Synth).toDestination();
+            pageTurnSynth = new Tone.MembraneSynth().toDestination();
+            audioContextInitialized = true;
+        } catch (e) {
+            console.warn("Audio init failed", e);
+        }
+    }
+
+    function playSound(type) {
+        if (!audioContextInitialized) return;
+        switch (type) {
+            case 'correct': correctSound.triggerAttackRelease('C5', '0.1s'); break;
+            case 'error': errorSound.triggerAttackRelease('A2', '0.1s'); break;
+            case 'turn': pageTurnSynth.triggerAttackRelease("C2", "32n"); break;
+            case 'complete': completionSynth.triggerAttackRelease(["C5", "E5", "G5", "C6"], "4n"); break;
+        }
+    }
+
+    function playAudioUrl(url) {
+        new Audio(url).play();
+    }
+
+    // --- UI Logic ---
+    const container = document.getElementById('content-area');
+    const header = document.getElementById('header');
+    const footer = document.getElementById('footer');
+    const pageIndicator = document.getElementById('page-indicator');
+    const btnNext = document.getElementById('btn-next');
+    const btnPrev = document.getElementById('btn-prev');
+
+    let pageIndex = 0;
+    let wrongAttempts = 0; // For Quiz logic
+
+    function renderPage() {
+        container.innerHTML = '';
+        const page = pages[pageIndex];
+        
+        pageIndicator.innerText = `${pageIndex + 1} / ${pages.length}`;
+        
+        if (page.type === 'cover') {
+            header.classList.add('hidden');
+            footer.classList.add('hidden');
+        } else {
+            header.classList.remove('hidden');
+            footer.classList.remove('hidden');
+        }
+
+        // Reset state
+        wrongAttempts = 0;
+        
+        // Navigation Buttons
+        btnPrev.disabled = pageIndex <= 1;
+        btnPrev.classList.toggle('opacity-0', pageIndex <= 1);
+        
+        btnNext.disabled = page.type !== 'outro'; // Only enabled by default on outro
+        btnNext.classList.toggle('bg-gray-400', page.type !== 'outro');
+        btnNext.classList.toggle('bg-indigo-600', page.type === 'outro');
+
+        switch(page.type) {
+            case 'cover': renderCover(page); break;
+            case 'choice': renderChoice(page); break;
+            case 'input': renderInput(page); break;
+            case 'outro': renderOutro(page); break;
+        }
+    }
+
+    function enableNext() {
+        btnNext.disabled = false;
+        btnNext.classList.remove('bg-gray-400');
+        btnNext.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+    }
+
+    // --- Render Functions ---
+
+    function renderCover(page) {
+        container.innerHTML = `
+            <div class="page-wrapper fade-in text-center">
+                <div class="flex flex-col items-center justify-center space-y-[4vh]">
+                    <div class="w-[15vh] h-[15vh] bg-indigo-100 rounded-full flex items-center justify-center shadow-inner">
+                        <i class="ph ph-pencil-simple text-[8vh] text-indigo-600"></i>
+                    </div>
+                    <h1 class="text-fluid-xl font-bold text-gray-800 leading-tight">${page.title}</h1>
+                    <p class="text-fluid-lg text-gray-600 font-medium">${page.subtitle}</p>
+                    <button onclick="nextPage()" class="mt-[5vh] px-[4vw] py-[2vh] bg-indigo-600 text-white rounded-full font-bold text-fluid-base shadow-lg hover:bg-indigo-700 transition transform hover:scale-105">
+                        ${page.buttonText}
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderChoice(page) {
+        const optionHtml = page.options.map(opt => `
+            <button class="choice-btn w-full py-4 px-6 bg-gray-50 border-2 border-gray-200 rounded-xl text-lg font-semibold text-gray-700 hover:border-indigo-400 transition" onclick="checkChoice(this, '${opt}', '${page.correct.replace(/'/g, "\\'")}')">
+                ${opt}
+            </button>
+        `).join('');
+
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                <div class="card-box space-y-6 w-full max-w-xl">
+                    <div class="space-y-2">
+                        <p class="text-sm font-bold text-gray-400 uppercase tracking-wider">${page.instruction}</p>
+                        <h2 class="text-fluid-lg font-bold text-indigo-900 korean-text">${page.question}</h2>
+                    </div>
+                    <!-- CHANGED: Use grid for choices -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                        ${optionHtml}
+                    </div>
+                    <div id="feedback" class="h-8 font-bold"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    function checkChoice(btn, selected, correct) {
+        const feedback = document.getElementById('feedback');
+        if (selected === correct) {
+            playSound('correct');
+            btn.classList.add('bg-green-100', 'border-green-500', 'text-green-700');
+            feedback.innerHTML = `<span class="text-green-600">Correct !</span>`;
+            // Disable all buttons
+            document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+            enableNext();
+        } else {
+            playSound('error');
+            btn.classList.add('bg-red-100', 'border-red-500', 'text-red-700');
+            feedback.innerHTML = `<span class="text-red-500">Essayez encore.</span>`;
+        }
+    }
+
+    function renderInput(page) {
+        container.innerHTML = `
+            <div class="page-wrapper fade-in w-full">
+                <div class="flex flex-col items-center gap-4 w-full max-w-2xl">
+                    <div class="card-box w-full space-y-4">
+                        <p class="text-sm font-bold text-gray-400 uppercase tracking-wider">${page.instruction}</p>
+                        <h2 class="text-fluid-lg font-bold text-gray-800">${page.question}</h2>
+                        
+                        <div class="w-full bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
+                            <p class="text-xl md:text-2xl font-bold text-indigo-900 korean-text mb-4">${page.prompt}</p>
+                            <div class="flex gap-2">
+                                <input type="text" id="answer-input" class="flex-grow p-3 rounded-lg border-2 border-gray-300 focus:border-indigo-500 outline-none text-center text-xl font-bold korean-text" placeholder="Tapez ici..." autocomplete="off">
+                                <button onclick="checkInput('${page.correct}')" class="px-4 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700">
+                                    <i class="ph ph-check text-xl"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="feedback" class="h-8 font-bold flex items-center justify-center gap-2"></div>
+                    </div>
+                    
+                    <!-- Virtual Keyboard -->
+                    <div class="w-full bg-gray-200 p-2 md:p-4 rounded-xl shadow-inner">
+                        ${renderKeyboard()}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderKeyboard() {
+        const rows = [
+            ['ㅂ','ㅈ','ㄷ','ㄱ','ㅅ','ㅛ','ㅕ','ㅑ','ㅐ','ㅔ'],
+            ['ㅁ','ㄴ','ㅇ','ㄹ','ㅎ','ㅗ','ㅓ','ㅏ','ㅣ'],
+            ['ㅋ','ㅌ','ㅊ','ㅍ','ㅠ','ㅜ','ㅡ']
+        ];
+        
+        let html = '';
+        rows.forEach(row => {
+            html += `<div class="keyboard-row">`;
+            row.forEach(char => {
+                html += `<button class="key-btn" onclick="virtualType('${char}')">${char}</button>`;
+            });
+            html += `</div>`;
+        });
+        
+        // Bottom Row
+        html += `
+            <div class="keyboard-row">
+                <button class="key-btn special" onclick="virtualType('SHIFT')"><i class="ph ph-arrow-fat-up"></i></button>
+                <button class="key-btn space" onclick="virtualType('SPACE')">Espace</button>
+                <button class="key-btn special" onclick="virtualType('BACK')"><i class="ph ph-backspace"></i></button>
+            </div>
+        `;
+        return html;
+    }
+
+    // Virtual Typing Logic using Hangul.js
+    let isShifted = false;
+    const shiftMap = {'ㅂ':'ㅃ', 'ㅈ':'ㅉ', 'ㄷ':'ㄸ', 'ㄱ':'ㄲ', 'ㅅ':'ㅆ', 'ㅐ':'ㅒ', 'ㅔ':'ㅖ'};
+
+    function virtualType(key) {
+        const input = document.getElementById('answer-input');
+        if (!input) return;
+
+        let char = key;
+        
+        if (key === 'SHIFT') {
+            isShifted = !isShifted;
+            // Visual toggle of keyboard caps can be implemented here if desired
+            const buttons = document.querySelectorAll('.key-btn');
+            buttons.forEach(btn => {
+                const original = btn.innerText;
+                // If it has a shift pair, toggle.
+                // Simple toggle for display:
+                if (isShifted) {
+                    if (shiftMap[original]) btn.innerText = shiftMap[original];
+                    else btn.classList.add('opacity-50'); // Dim unsupported keys
+                } else {
+                    // Find key by value in shiftMap to revert? Or just re-render.
+                    // Easier: Re-render is safer but heavier. Just manual mapping revert:
+                    const reverseMap = {'ㅃ':'ㅂ', 'ㅉ':'ㅈ', 'ㄸ':'ㄷ', 'ㄲ':'ㄱ', 'ㅆ':'ㅅ', 'ㅒ':'ㅐ', 'ㅖ':'ㅔ'};
+                    if (reverseMap[original]) btn.innerText = reverseMap[original];
+                    btn.classList.remove('opacity-50');
+                }
+            });
+            return; 
+        }
+        
+        if (isShifted && shiftMap[key]) {
+            char = shiftMap[key];
+            // Reset shift after one char press usually
+            isShifted = false; 
+            // Reset visuals
+            const buttons = document.querySelectorAll('.key-btn');
+            const reverseMap = {'ㅃ':'ㅂ', 'ㅉ':'ㅈ', 'ㄸ':'ㄷ', 'ㄲ':'ㄱ', 'ㅆ':'ㅅ', 'ㅒ':'ㅐ', 'ㅖ':'ㅔ'};
+            buttons.forEach(btn => {
+                if (reverseMap[btn.innerText]) btn.innerText = reverseMap[btn.innerText];
+                btn.classList.remove('opacity-50');
+            });
+        }
+
+        let currentVal = input.value;
+        let jamos = Hangul.disassemble(currentVal); // Disassemble current input
+
+        if (key === 'BACK') {
+            jamos.pop();
+        } else if (key === 'SPACE') {
+            jamos.push(' ');
+        } else {
+            jamos.push(char);
+        }
+
+        input.value = Hangul.assemble(jamos);
+        input.focus();
+    }
+
+    function checkInput(correctAnswer) {
+        const input = document.getElementById('answer-input');
+        const feedback = document.getElementById('feedback');
+        // Remove spaces for lenient checking
+        const userVal = input.value.replace(/\s+/g, '');
+        const correctVal = correctAnswer.replace(/\s+/g, '');
+
+        if (userVal === correctVal) {
+            playSound('correct');
+            feedback.innerHTML = `<span class="text-green-600">Correct ! (${correctAnswer})</span>`;
+            input.disabled = true;
+            enableNext();
+        } else {
+            playSound('error');
+            wrongAttempts++;
+            let feedbackHTML = `<span class="text-red-500">Essayez encore.</span>`;
+            
+            const page = pages[pageIndex];
+            
+            // Logic for Hint (2+ fails)
+            if (page.hintAudio && wrongAttempts >= 2) {
+                 feedbackHTML += `
+                    <button id="hint-btn" onclick="playAudioUrl('${page.hintAudio}')" class="ml-2 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs flex items-center gap-1 hover:bg-yellow-200 cursor-pointer transition">
+                        <i class="ph ph-speaker-high"></i> Indice
+                    </button>
+                `;
+            }
+
+            // Logic for Show Answer (3+ fails)
+            if (wrongAttempts >= 3) {
+                 feedbackHTML += `
+                    <button id="answer-btn" onclick="revealAnswer('${correctAnswer.replace(/'/g, "\\'")}')" class="ml-2 px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs flex items-center gap-1 hover:bg-red-200 cursor-pointer transition">
+                        <i class="ph ph-eye"></i> Voir la réponse
+                    </button>
+                `;
+            }
+            
+            feedback.innerHTML = feedbackHTML;
+        }
+    }
+
+    function revealAnswer(correctAnswer) {
+        const input = document.getElementById('answer-input');
+        const feedback = document.getElementById('feedback');
+        
+        input.value = correctAnswer;
+        input.disabled = true;
+        
+        feedback.innerHTML = `<span class="text-blue-600 font-bold">Réponse : ${correctAnswer}</span>`;
+        enableNext();
+    }
+
+    function renderOutro(page) {
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                <div class="flex flex-col items-center justify-center space-y-[4vh]">
+                    <div class="w-[15vh] h-[15vh] bg-green-100 rounded-full flex items-center justify-center mb-4 text-green-600 animate-bounce shadow-lg">
+                        <i class="ph ph-check-fat icon-fluid-md"></i>
+                    </div>
+                    <h1 class="text-fluid-xl font-bold text-gray-800">Terminé !</h1>
+                    <div class="card-box">
+                        <p class="text-fluid-base text-gray-600 text-center leading-relaxed">
+                            ${page.text}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `;
+        initAudio().then(() => {
+            playSound('complete');
+            window.parent.postMessage({ type: 'lesson_complete' }, '*');
+        });
+        footer.classList.add('hidden');
+    }
+
+    // Navigation
+    function nextPage() {
+        initAudio();
+        playSound('turn');
+        if (pageIndex < pages.length - 1) {
+            pageIndex++;
+            renderPage();
+        }
+    }
+
+    function prevPage() {
+        playSound('turn');
+        if (pageIndex > 0) {
+            pageIndex--;
+            renderPage();
+        }
+    }
+
+    btnNext.addEventListener('click', nextPage);
+    btnPrev.addEventListener('click', prevPage);
+
+    // Initial
+    renderPage();
+
+</script>
+</body>
+</html>
