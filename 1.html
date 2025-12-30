@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Parler de soi - Leçon 1</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Tone.js for Sound Effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+        :root {
+            /* Dynamic sizing variables based on viewport min-dimension */
+            --unit: 1vmin; 
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden; /* Prevent body scroll */
+        }
+
+        .korean-text {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        #app-container {
+            background-color: white;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Desktop: 16:9 Ratio Container */
+        @media (min-width: 1024px) {
+            #app-container {
+                aspect-ratio: 16/9;
+                width: auto;
+                height: 100vh; /* Fit height, width adjusts */
+                max-width: 177.78vh; /* 16/9 * 100vh */
+                box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            }
+            /* Base font scaling for desktop */
+            html { font-size: 2.5vh; } 
+        }
+
+        /* Mobile */
+        @media (max-width: 1023px) {
+            #app-container {
+                width: 100%;
+                height: 100%;
+            }
+            html { font-size: 16px; }
+        }
+
+        /* --- Layout Utilities for No-Scroll --- */
+        .page-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center; /* Center vertically */
+            /* Optimized padding for various aspect ratios */
+            padding: clamp(2vh, 4vmin, 4vh) clamp(2vw, 4vmin, 4vw);
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            overflow: hidden; /* Prevent page overflow */
+        }
+
+        .card-box {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            
+            /* Responsive padding: shrinks on smaller screens to fit content */
+            padding: clamp(1.5rem, 4vmin, 3rem);
+            
+            width: 100%;
+            max-width: 800px;
+            
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            
+            /* Smart height adjustment */
+            flex-shrink: 1; /* Allow shrinking if needed */
+            max-height: 100%; /* Use available space in wrapper */
+            overflow-y: auto; /* Internal scroll only if content physically cannot fit */
+        }
+        
+        /* Typography Scaling */
+        .text-fluid-xl { font-size: clamp(1.5rem, 5vmin, 4rem); }
+        .text-fluid-lg { font-size: clamp(1.2rem, 3.5vmin, 2.5rem); }
+        .text-fluid-base { font-size: clamp(1rem, 2.5vmin, 1.5rem); }
+        .text-fluid-sm { font-size: clamp(0.875rem, 2vmin, 1.25rem); }
+
+        /* Icon Scaling */
+        .icon-fluid-lg { font-size: clamp(2rem, 6vmin, 5rem); }
+        .icon-fluid-md { font-size: clamp(1.5rem, 4vmin, 3rem); }
+
+        /* Button Styling */
+        .nav-btn {
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        @media (min-width: 1024px) {
+            .nav-btn {
+                width: 5rem;
+                height: 5rem;
+            }
+        }
+
+        /* Animations */
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+        .recording-pulse { animation: pulse-red 1.5s infinite; }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <!-- Header: Page Indicator Only -->
+    <div id="header" class="absolute top-0 right-0 p-4 md:p-6 z-20 hidden">
+        <span id="page-indicator" class="font-mono text-gray-400 font-bold text-fluid-sm bg-gray-100 px-3 py-1 rounded-full">1 / 20</span>
+    </div>
+
+    <!-- Main Content Area -->
+    <div id="content-area" class="flex-grow flex flex-col items-center justify-center w-full h-full relative">
+        <!-- Dynamic Content -->
+    </div>
+
+    <!-- Footer Controls: Minimal Floating Buttons -->
+    <div id="footer" class="absolute bottom-0 w-full p-6 md:p-8 flex justify-between items-end z-20 pointer-events-none hidden">
+        <!-- Pointer events none on container so clicks pass through to content if needed, 
+             pointer-events-auto on buttons to ensure they work -->
+        
+        <button id="btn-prev" class="nav-btn bg-gray-100 text-gray-500 hover:bg-gray-200 pointer-events-auto">
+            <i class="ph ph-arrow-left icon-fluid-md"></i>
+        </button>
+        
+        <button id="btn-next" class="nav-btn bg-indigo-600 text-white hover:bg-indigo-700 pointer-events-auto">
+            <i class="ph ph-arrow-right icon-fluid-md"></i>
+        </button>
+    </div>
+</div>
+
+<script>
+    // --- Configuration & State ---
+    const BASE_44_ORIGIN = "https://coreeno.base44.app"; 
+    const CLOVA_API_FUNCTION_URL = BASE_44_ORIGIN + '/api/functions/naverClovaSpeech';
+    const PLACEHOLDER_AUDIO = ""; 
+
+    let currentPage = 0;
+    let audioContextInitialized = false;
+    let correctSound, completionSynth, pageTurnSynth;
+    
+    // Audio Management
+    let currentAudioObj = null;
+    let autoPlayTimer = null;
+
+    const pageStates = {}; 
+
+    // --- Data Structure ---
+    // Color coding: Blue (text-blue-600) for Noun, Rose (text-rose-500) for Verb/Particle
+    const pages = [
+        {
+            type: 'cover',
+            title: "Chapitre 1- Demander et dire son nom",
+            subtitle: "Leçon 1 - Comment demander et dire son nom",
+            buttonText: "Commencer"
+        },
+        {
+            type: 'text',
+            text: "Bonjour ! Bienvenue dans le premier cours du programme &lt;Parler de soi&gt; ! Dans cette leçon, nous allons nous entraîner à demander le nom de notre interlocuteur et à dire notre propre nom.",
+            audio: "https://res.cloudinary.com/de76i94ia/video/upload/v1766919671/audio_1_tzwrvj.mp3"
+        },
+        {
+            type: 'card_audio',
+            mainText: "이름",
+            sub1: "Prénom",
+            sub2: "(Nom+)prénom",
+            text: "Dans les documents officiels, &lt;성&gt; signifie nom de famille et &lt;이름&gt; signifie prénom.<br><br>Cependant, dans les conversations courantes, on dit souvent le nom et le prénom ensemble. Pour les noms étrangers avec un nom de famille long, il est acceptable de ne dire que le prénom.",
+            audio: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933274/audio_2_vg0q9m.mp3", 
+            cardAudio: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933258/%E1%84%8B%E1%85%B5%E1%84%85%E1%85%B3%E1%86%B7_g9gzd3.mp3" 
+        },
+        {
+            type: 'repeat',
+            instruction: "Répétez après moi.",
+            mainText: "이름",
+            sub1: "Prénom",
+            sub2: "(Nom+)prénom",
+            referenceText: "이름",
+            attempts: 3,
+            cardAudio: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933258/%E1%84%8B%E1%85%B5%E1%84%85%E1%85%B3%E1%86%B7_g9gzd3.mp3"
+        },
+        {
+            type: 'card_audio',
+            mainText: "<span class='text-blue-600'>뭐</span><span class='text-rose-500'>예요</span>",
+            sub1: "<span class='text-blue-600'>Quoi</span> <span class='text-rose-500'>être</span>",
+            sub2: "Qu'est-ce que",
+            text: "'뭐' est la forme contractée de '무엇' qui signifie 'Quoi'. C'est un mot interrogatif utilisé pour demander le nom ou la définition de quelque chose que l'on ne connaît pas.",
+            audio: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933274/audio_3_n7w8kk.mp3",
+            cardAudio: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933257/%E1%84%86%E1%85%AF%E1%84%8B%E1%85%A8%E1%84%8B%E1%85%AD_mowaek.mp3"
+        },
+        {
+            type: 'repeat',
+            instruction: "Répétez après moi.",
+            mainText: "<span class='text-blue-600'>뭐</span><span class='text-rose-500'>예요</span>",
+            sub1: "<span class='text-blue-600'>Quoi</span> <span class='text-rose-500'>être</span>",
+            sub2: "Qu'est-ce que",
+            referenceText: "뭐예요",
+            attempts: 3,
+            cardAudio: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933257/%E1%84%86%E1%85%AF%E1%84%8B%E1%85%A8%E1%84%8B%E1%85%AD_mowaek.mp3"
+        },
+        {
+            type: 'repeat',
+            instruction: "Maintenant, combinons ces deux parties pour poser la question.",
+            mainText: "이름이 뭐예요?",
+            sub1: "",
+            sub2: "Quel est votre (pré)nom?",
+            referenceText: "이름이 뭐예요",
+            attempts: 3,
+            cardAudio: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933257/sentence_1_nqvqxf.mp3"
+        },
+        {
+            type: 'repeat',
+            instruction: "Essayez encore une fois.",
+            mainText: "이름이 뭐예요?",
+            sub1: "",
+            sub2: "Quel est votre (pré)nom?",
+            referenceText: "이름이 뭐예요",
+            attempts: 3,
+            cardAudio: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933257/sentence_1_nqvqxf.mp3"
+        },
+        {
+            type: 'card_audio',
+            mainText: "저는",
+            sub1: "Moi",
+            sub2: "Je",
+            text: "\"저\" est le pronom personnel de la première personne du singulier (\"Je\") utilisé dans les phrases formelles ou polies.<br><br>Pour souligner que \"Je\" est le sujet unique de la phrase, on commence la phrase en ajoutant la particule auxiliaire \"는\".",
+            audio: [
+                "https://res.cloudinary.com/de76i94ia/video/upload/v1766933274/audio_4_kgaylh.mp3",
+                "https://res.cloudinary.com/de76i94ia/video/upload/v1766933274/audio_5_dvtuoc.mp3"
+            ],
+            cardAudio: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933257/%E1%84%8C%E1%85%A5%E1%84%82%E1%85%B3%E1%86%AB_cisbyn.mp3"
+        },
+        {
+            type: 'repeat',
+            instruction: "Répétez après moi.",
+            mainText: "저는",
+            sub1: "Moi",
+            sub2: "Je",
+            referenceText: "저는",
+            attempts: 3,
+            cardAudio: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933257/%E1%84%8C%E1%85%A5%E1%84%82%E1%85%B3%E1%86%AB_cisbyn.mp3"
+        },
+        {
+            type: 'card_audio',
+            mainText: "<span class='text-blue-600'>제니</span><span class='text-rose-500'>예요</span>",
+            sub1: "<span class='text-blue-600'>Jennie</span>, <span class='text-rose-500'>être</span>",
+            sub2: "être Jennie",
+            text: "En coréen, le prédicat (verbe ou adjectif) se place à la fin de la phrase. \"이다\", qui signifie \"Être\", doit être conjugué pour être utilisé.<br>Pour un prénom se terminant par une voyelle comme “Jennie”, on utilise “예요”.",
+            audio: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933274/audio_6_spttet.mp3",
+            cardAudio: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933258/%E1%84%8C%E1%85%A6%E1%84%82%E1%85%B5%E1%84%8B%E1%85%A8%E1%84%8B%E1%85%AD_sehzi8.mp3"
+        },
+        {
+            type: 'repeat',
+            instruction: "Combinez ces deux parties pour dire le nom.",
+            mainText: "저는 제니예요.",
+            sub1: "",
+            sub2: "Je suis Jennie.",
+            referenceText: "저는 제니예요",
+            attempts: 3,
+            cardAudio: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933257/sentene_2_r4d0es.mp3"
+        },
+        {
+            type: 'card_audio',
+            mainText: "<span class='text-blue-600'>요한</span><span class='text-rose-500'>이에요</span>",
+            sub1: "<span class='text-blue-600'>Yohan</span>, <span class='text-rose-500'>être</span>",
+            sub2: "être Yohan",
+            text: "Pour un prénom se terminant par une consonne comme \"Yohan\", on utilise \"이에요\" au lieu de \"예요\". Le sens est le même, mais la forme change pour rendre la liaison plus fluide.",
+            audio: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933274/audio_7_xq1ui8.mp3",
+            cardAudio: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933257/%E1%84%8B%E1%85%AD%E1%84%92%E1%85%A1%E1%86%AB%E1%84%8B%E1%85%B5%E1%84%8B%E1%85%A6%E1%84%8B%E1%85%AD_q4hoar.mp3"
+        },
+        {
+            type: 'repeat',
+            instruction: "Combinez ces deux parties pour dire le nom.",
+            mainText: "저는 요한이에요.",
+            sub1: "",
+            sub2: "Je suis Yohan.",
+            referenceText: "저는 요한이에요",
+            attempts: 3,
+            cardAudio: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933257/sentence_3_jbqjj5.mp3"
+        },
+        {
+            type: 'repeat',
+            instruction: "Bravo ! Maintenant, demandez le nom encore une fois.",
+            mainText: "이름이 뭐예요?",
+            sub1: "",
+            sub2: "Quel est votre (pré)nom?",
+            referenceText: "이름이 뭐예요",
+            attempts: 3,
+            cardAudio: PLACEHOLDER_AUDIO
+        },
+        {
+            type: 'quiz_speak',
+            instruction: "À vous de le dire !",
+            mainText: "Quel est votre (pré)nom?",
+            hint: "(이름이 뭐예요? 라고 말해야 통과)",
+            referenceText: "이름이 뭐예요",
+            hiddenHint: true
+        },
+        {
+            type: 'quiz_response',
+            instruction: "Cette fois, répondez à la question.",
+            // audioPrompt removed
+            mainText: "Je suis Jennie.",
+            subKorean: "저는 제니예요.",
+            referenceText: "저는 제니예요"
+        },
+        {
+            type: 'quiz_response',
+            instruction: "Répondez à la question.",
+            // audioPrompt removed
+            mainText: "Je suis Yohan.",
+            subKorean: "저는 요한이에요.",
+            referenceText: "저는 요한이에요"
+        },
+        {
+            type: 'free_speak',
+            instruction: "C'est la dernière question. Dites votre propre nom.",
+            // audioPrompt removed
+            mainText: "Je suis [Votre Nom].",
+            subKorean: "저는 [Nom]예요/이에요.",
+            referenceText: null
+        },
+        {
+            type: 'outro',
+            text: "C'est tout pour aujourd'hui ! Entraînez-vous davantage avec les expressions apprises aujourd'hui dans les leçons 2 et 3 ! À bientôt !",
+            audio: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933273/audio_8_brpnpi.mp3"
+        }
+    ];
+
+    // --- Sound Logic ---
+    async function initAudio() {
+        if (audioContextInitialized) return;
+        try {
+            await Tone.start();
+            correctSound = new Tone.Synth().toDestination();
+            completionSynth = new Tone.PolySynth(Tone.Synth).toDestination();
+            // Simple click/tick for page turn
+            pageTurnSynth = new Tone.MembraneSynth({
+                pitchDecay: 0.008,
+                octaves: 1,
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
+            }).toDestination();
+            audioContextInitialized = true;
+        } catch (e) {
+            console.warn("Audio init failed", e);
+        }
+    }
+
+    // New Audio Logic for Autoplay and Stop
+    function stopCurrentAudio() {
+        // Clear pending autoplay
+        if (autoPlayTimer) {
+            clearTimeout(autoPlayTimer);
+            autoPlayTimer = null;
+        }
+        // Stop currently playing audio
+        if (currentAudioObj) {
+            currentAudioObj.pause();
+            currentAudioObj.currentTime = 0;
+            // If we had an 'onended' chain for arrays, the stop above just pauses the current one.
+            // We override onended to prevent the next one from starting.
+            currentAudioObj.onended = null;
+            currentAudioObj = null;
+        }
+    }
+
+    function playAudio(src) {
+        stopCurrentAudio(); // Ensure cleanup before play
+        if (!src) return;
+        
+        // Handle Array (Sequential Playback)
+        if (Array.isArray(src)) {
+            if (src.length === 0) return;
+            
+            const playSequence = (arr) => {
+                if (arr.length === 0) return;
+                currentAudioObj = new Audio(arr[0]);
+                const playPromise = currentAudioObj.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise.catch(e => {
+                        // Ignore interruption errors when user navigates away
+                        if (e.name === 'AbortError' || e.message.includes('interrupted')) {
+                            // Expected behavior
+                        } else {
+                            console.error("Audio playback error:", e);
+                        }
+                    });
+                }
+                
+                currentAudioObj.onended = () => {
+                    playSequence(arr.slice(1));
+                };
+            };
+            
+            playSequence(src);
+            return;
+        }
+        
+        // Use standard Audio object
+        currentAudioObj = new Audio(src);
+        const playPromise = currentAudioObj.play();
+        
+        if (playPromise !== undefined) {
+            playPromise.catch(e => {
+                // Ignore interruption errors when user navigates away
+                if (e.name === 'AbortError' || e.message.includes('interrupted')) {
+                    // Expected behavior
+                } else {
+                    console.error("Audio playback error:", e);
+                }
+            });
+        }
+    }
+    
+    function playPageTurnSound() {
+        if (pageTurnSynth) pageTurnSynth.triggerAttackRelease("C2", "32n");
+    }
+
+    function playSuccessSound() { if(correctSound) correctSound.triggerAttackRelease('C5', '0.1s'); }
+    function playCompletionSound() { if(completionSynth) completionSynth.triggerAttackRelease(["C5", "E5", "G5", "C6"], "0.5s"); }
+
+    // --- UI Rendering ---
+    const container = document.getElementById('content-area');
+    const btnNext = document.getElementById('btn-next');
+    const btnPrev = document.getElementById('btn-prev');
+    const header = document.getElementById('header');
+    const footer = document.getElementById('footer');
+    const pageIndicator = document.getElementById('page-indicator');
+
+    function renderPage() {
+        // STOP audio immediately when rendering a new page
+        stopCurrentAudio();
+
+        container.innerHTML = '';
+        const page = pages[currentPage];
+        
+        // Indicator
+        pageIndicator.innerText = `${currentPage + 1} / ${pages.length}`;
+
+        // Visibility
+        if (page.type === 'cover') {
+            header.classList.add('hidden');
+            footer.classList.add('hidden');
+        } else {
+            header.classList.remove('hidden');
+            footer.classList.remove('hidden');
+        }
+
+        // Back Button Logic
+        if (currentPage <= 1) {
+            btnPrev.disabled = true;
+            btnPrev.classList.add('opacity-0'); 
+        } else {
+            btnPrev.disabled = false;
+            btnPrev.classList.remove('opacity-0');
+        }
+
+        resetNextButton();
+
+        // Render Content
+        switch(page.type) {
+            case 'cover': renderCover(page); break;
+            case 'text': renderTextPage(page); break;
+            case 'card_audio': renderCardAudio(page); break;
+            case 'repeat': renderRepeat(page); break;
+            case 'quiz_speak': renderQuizSpeak(page); break;
+            case 'quiz_response': renderQuizResponse(page); break;
+            case 'free_speak': renderFreeSpeak(page); break;
+            case 'outro': renderOutro(page); break;
+        }
+
+        checkPageState(page);
+    }
+
+    function resetNextButton() {
+        btnNext.disabled = false;
+        btnNext.classList.remove('bg-gray-400', 'cursor-not-allowed');
+        btnNext.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+        btnNext.innerHTML = `<i class="ph ph-arrow-right icon-fluid-md"></i>`;
+    }
+
+    function disableNextButton() {
+        btnNext.disabled = true;
+        btnNext.classList.add('bg-gray-400', 'cursor-not-allowed');
+        btnNext.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+    }
+
+    function checkPageState(page) {
+        if (!['repeat', 'quiz_speak', 'quiz_response', 'free_speak'].includes(page.type)) return;
+        if (!pageStates[currentPage]) pageStates[currentPage] = { attemptsUsed: 0, passed: false };
+        const state = pageStates[currentPage];
+        
+        if (state.passed) {
+             resetNextButton();
+             const feedback = document.getElementById('feedback-msg');
+             const recBtn = document.getElementById('rec-btn');
+             // Show success message if already passed
+             if(feedback) feedback.innerHTML = `<span class="text-green-500 font-bold">Excellent !</span>`;
+             if(recBtn) {
+                 recBtn.disabled = true;
+                 recBtn.innerHTML = `<i class="ph ph-check icon-fluid-md text-green-500"></i>`;
+             }
+        } else {
+            disableNextButton();
+            if (page.attempts && state.attemptsUsed >= page.attempts) {
+                const feedback = document.getElementById('feedback-msg');
+                 if(feedback) feedback.innerHTML = `<span class="text-orange-500">Réessayez.</span>`;
+                 resetNextButton();
+            }
+        }
+    }
+
+    // --- Render Components ---
+
+    function renderCover(page) {
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                <div class="flex flex-col items-center justify-center space-y-[4vh]">
+                    <div class="w-[15vh] h-[15vh] bg-indigo-100 rounded-full flex items-center justify-center shadow-inner">
+                        <i class="ph ph-chat-circle-text text-[8vh] text-indigo-600"></i>
+                    </div>
+                    <h1 class="text-fluid-xl font-bold text-gray-800 leading-tight">${page.title}</h1>
+                    <p class="text-fluid-lg text-gray-600 font-medium">${page.subtitle}</p>
+                    <button onclick="nextPage()" class="mt-[5vh] px-[4vw] py-[2vh] bg-indigo-600 text-white rounded-full font-bold text-fluid-base shadow-lg hover:bg-indigo-700 transition transform hover:scale-105">
+                        ${page.buttonText}
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderTextPage(page) {
+        // Auto-play trigger for explanation
+        if (page.audio) {
+            autoPlayTimer = setTimeout(() => {
+                playAudio(page.audio);
+            }, 1000);
+        }
+
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
+                    <div class="card-box">
+                        <p class="text-fluid-base text-gray-700 leading-relaxed text-left">
+                            ${page.text}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderCardAudio(page) {
+        // Auto-play explanation audio (page.audio) if it exists
+        if (page.audio) {
+            autoPlayTimer = setTimeout(() => {
+                playAudio(page.audio);
+            }, 1000);
+        }
+
+        // The button plays cardAudio (Pronunciation)
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                 <div class="flex flex-col items-center max-w-4xl w-full gap-[2vh]">
+                    <div class="card-box py-[4vh] space-y-[2vh]">
+                        <h2 class="text-fluid-xl font-bold text-indigo-900 korean-text">${page.mainText}</h2>
+                        <div class="flex flex-col items-center">
+                            <span class="subtitle-1 text-fluid-sm">${page.sub1}</span>
+                            <span class="subtitle-2 text-fluid-base">${page.sub2}</span>
+                        </div>
+                        <button onclick="playAudio('${page.cardAudio}')" class="mt-[1vh] w-[8vh] h-[8vh] bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition shrink-0 shadow-sm">
+                            <i class="ph ph-speaker-high icon-fluid-md"></i>
+                        </button>
+                    </div>
+                    ${page.text ? `
+                        <div class="bg-indigo-50/50 p-[3vh] rounded-2xl border border-indigo-100 text-left w-full max-w-[800px]">
+                            <p class="text-gray-700 text-fluid-base leading-relaxed">${page.text}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderRepeat(page) {
+         // Auto-play explanation if any (rare for repeat, but good practice)
+         if (page.audio) {
+            autoPlayTimer = setTimeout(() => {
+                playAudio(page.audio);
+            }, 1000);
+        }
+
+        // Added speaker button for pronunciation practice
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
+                    <p class="text-gray-500 font-bold uppercase tracking-widest text-fluid-sm">${page.instruction}</p>
+                    <div class="card-box py-[5vh] space-y-[2vh]">
+                        <div class="flex items-center justify-center gap-4">
+                            <h2 class="text-fluid-xl font-bold text-indigo-900 korean-text">${page.mainText}</h2>
+                            <button onclick="playAudio('${page.cardAudio}')" class="w-[6vh] h-[6vh] bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition shadow-sm">
+                                <i class="ph ph-speaker-high text-xl"></i>
+                            </button>
+                        </div>
+                        ${page.sub1 ? `<span class="subtitle-1 text-fluid-sm">${page.sub1}</span>` : ''}
+                        <span class="subtitle-2 text-fluid-base">${page.sub2}</span>
+                    </div>
+                    
+                    <div class="flex flex-col items-center gap-[2vh]">
+                        <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
+                            <i class="ph ph-microphone icon-fluid-lg"></i>
+                        </button>
+                        <div id="feedback-msg" class="h-[3vh] text-fluid-sm font-medium text-gray-500">Appuyez pour parler</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        setupRecording('rec-btn', 'feedback-msg', page.referenceText, page.attempts);
+    }
+
+    function renderQuizSpeak(page) {
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                <div class="flex flex-col items-center max-w-4xl w-full gap-[4vh]">
+                    <p class="text-gray-500 font-bold uppercase tracking-widest text-fluid-sm">${page.instruction}</p>
+                    <div class="w-full max-w-[800px] bg-indigo-600 p-[5vh] rounded-[2rem] shadow-xl flex flex-col items-center space-y-[2vh] text-white">
+                        <i class="ph ph-question icon-fluid-lg opacity-80"></i>
+                        <h2 class="text-fluid-lg font-bold leading-snug">${page.mainText}</h2>
+                    </div>
+                    
+                    <div class="flex flex-col items-center gap-[2vh]">
+                        <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
+                            <i class="ph ph-microphone icon-fluid-lg"></i>
+                        </button>
+                        <div id="feedback-msg" class="h-[3vh] text-fluid-sm font-medium text-gray-500">Appuyez pour répondre</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        setupRecording('rec-btn', 'feedback-msg', page.referenceText, 3);
+    }
+
+    function renderQuizResponse(page) {
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
+                    ${page.audioPrompt ? `
+                    <button onclick="playAudio('${page.audioPrompt}')" class="flex items-center gap-2 px-[3vh] py-[1.5vh] bg-indigo-50 text-indigo-700 rounded-xl text-fluid-sm font-bold hover:bg-indigo-100 transition">
+                        <i class="ph ph-speaker-high text-lg"></i> Écouter la question
+                    </button>
+                    ` : ''}
+
+                    <p class="text-gray-500 font-bold uppercase tracking-widest text-fluid-sm">${page.instruction}</p>
+                    
+                    <div class="card-box py-[5vh] space-y-[1.5vh]">
+                        <span class="text-fluid-lg font-bold text-gray-800">${page.mainText}</span>
+                        <span class="text-fluid-base text-indigo-600 korean-text font-medium">${page.subKorean}</span>
+                    </div>
+                    
+                    <div class="flex flex-col items-center gap-[2vh]">
+                        <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
+                            <i class="ph ph-microphone icon-fluid-lg"></i>
+                        </button>
+                        <div id="feedback-msg" class="h-[3vh] text-fluid-sm font-medium text-gray-500">Appuyez pour répondre</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        setupRecording('rec-btn', 'feedback-msg', page.referenceText, 3);
+    }
+
+    function renderFreeSpeak(page) {
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
+                    ${page.audioPrompt ? `
+                    <button onclick="playAudio('${page.audioPrompt}')" class="flex items-center gap-2 px-[3vh] py-[1.5vh] bg-indigo-50 text-indigo-700 rounded-xl text-fluid-sm font-bold hover:bg-indigo-100 transition">
+                        <i class="ph ph-speaker-high text-lg"></i> Écouter la question
+                    </button>
+                    ` : ''}
+
+                    <p class="text-gray-500 font-bold uppercase tracking-widest text-fluid-sm">${page.instruction}</p>
+                    
+                    <div class="w-full max-w-[800px] bg-indigo-50 p-[5vh] rounded-[2rem] border-2 border-indigo-200 border-dashed flex flex-col items-center space-y-[1.5vh]">
+                        <span class="text-fluid-lg font-bold text-gray-800">${page.mainText}</span>
+                        <span class="text-fluid-base text-indigo-600 korean-text text-center font-medium">${page.subKorean}</span>
+                    </div>
+                    
+                    <div class="flex flex-col items-center gap-[2vh]">
+                        <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
+                            <i class="ph ph-microphone icon-fluid-lg"></i>
+                        </button>
+                        <div id="feedback-msg" class="min-h-[3vh] text-fluid-sm font-medium text-gray-500 flex flex-col items-center justify-center">Dites votre nom complet</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        setupRecording('rec-btn', 'feedback-msg', null, 3);
+    }
+
+    function renderOutro(page) {
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                <div class="flex flex-col items-center justify-center space-y-[4vh]">
+                    <div class="w-[15vh] h-[15vh] bg-green-100 rounded-full flex items-center justify-center mb-4 text-green-600 animate-bounce shadow-lg">
+                        <i class="ph ph-check-fat icon-fluid-lg"></i>
+                    </div>
+                    <h1 class="text-fluid-xl font-bold text-gray-800">Terminé !</h1>
+                    <div class="card-box">
+                        <p class="text-fluid-base text-gray-600 text-center leading-relaxed">
+                            ${page.text}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Auto-play trigger for explanation audio (same as renderTextPage)
+        if (page.audio) {
+            autoPlayTimer = setTimeout(() => {
+                playAudio(page.audio);
+            }, 1500); // Slight delay to let the completion sound start first or finish
+        }
+
+        // --- Added Completion Sound and PostMessage ---
+        initAudio().then(() => {
+             // Play C Major 7 Chord: C5, E5, G5, B5 (or C6 as requested before)
+             // Using ["C5", "E5", "G5", "C6"] as per previous instructions
+             if(completionSynth) completionSynth.triggerAttackRelease(["C5", "E5", "G5", "C6"], "4n");
+             
+             // Send message to parent
+             window.parent.postMessage({ type: 'lesson_complete' }, '*');
+        });
+        
+        footer.classList.add('hidden');
+    }
+
+    // --- Helpers & Logic ---
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
+    let recordingTimeout;
+
+    async function setupRecording(btnId, feedbackId, referenceText, attemptsMax) {
+        const btn = document.getElementById(btnId);
+        const feedback = document.getElementById(feedbackId);
+        if (!pageStates[currentPage]) pageStates[currentPage] = { attemptsUsed: 0, passed: false };
+        const state = pageStates[currentPage];
+
+        if (state.passed) { btn.disabled = true; return; }
+
+        btn.onclick = async () => {
+            if (state.attemptsUsed >= attemptsMax && !state.passed) {
+                feedback.innerText = "Max tentatives.";
+                resetNextButton();
+                return;
+            }
+
+            if (!isRecording) {
+                try {
+                    await initAudio(); 
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+                    mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+                    mediaRecorder.onstop = async () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const reader = new FileReader();
+                        reader.readAsDataURL(audioBlob);
+                        reader.onloadend = async () => {
+                            const base64Audio = reader.result.split(',')[1];
+                            state.attemptsUsed++;
+                            await processAudio(base64Audio, referenceText, feedback, btn);
+                        };
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+                    mediaRecorder.start();
+                    isRecording = true;
+                    btn.classList.add('recording-pulse', 'bg-red-500', 'text-white', 'border-red-500');
+                    btn.classList.remove('bg-white', 'text-indigo-600', 'border-gray-100');
+                    btn.innerHTML = `<i class="ph ph-stop icon-fluid-md"></i>`;
+                    feedback.innerText = "Listening...";
+                    recordingTimeout = setTimeout(() => { if (isRecording) stopRecording(btn); }, 10000);
+                } catch (err) {
+                    console.error("Mic Error:", err);
+                    feedback.innerText = "Error mic.";
+                }
+            } else {
+                stopRecording(btn);
+            }
+        };
+    }
+
+    function stopRecording(btn) {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+            clearTimeout(recordingTimeout);
+        }
+        isRecording = false;
+        btn.classList.remove('recording-pulse', 'bg-red-500', 'text-white', 'border-red-500');
+        btn.classList.add('bg-white', 'text-indigo-600', 'border-gray-100');
+        btn.innerHTML = `<i class="ph ph-microphone icon-fluid-lg"></i>`;
+    }
+
+    async function processAudio(audioBase64, referenceText, feedbackEl, btnEl) {
+        feedbackEl.innerText = "...";
+        try {
+            const payload = { audioBase64: audioBase64, languageCode: "Kor" };
+            if (referenceText) payload.referenceText = referenceText;
+
+            const res = await fetch(CLOVA_API_FUNCTION_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) throw new Error("API Error");
+            const result = await res.json();
+            
+            const recognizedText = result.text; // Get the transcribed text
+            let passed = false;
+            const score = result.assessment?.pronunciation_score;
+            if (referenceText) { if (score >= 80) passed = true; }
+            else { if (result.text || score >= 0) passed = true; }
+
+            const state = pageStates[currentPage];
+            
+            // Format score for display, default to 0 if undefined for consistency
+            const displayScore = score !== undefined ? score : '-';
+
+            let messageContent = "";
+            if (passed) {
+                state.passed = true;
+                playSuccessSound();
+                messageContent = `<span class="text-green-500 font-bold">Excellent ! (${displayScore})</span>`;
+                btnEl.disabled = true;
+                btnEl.innerHTML = `<i class="ph ph-check icon-fluid-md text-green-500"></i>`;
+                resetNextButton();
+            } else {
+                if (state.attemptsUsed >= (pages[currentPage].attempts || 3)) {
+                     messageContent = `<span class="text-orange-500">Nombre de tentatives épuisé. (${displayScore})</span>`;
+                     resetNextButton();
+                } else {
+                     messageContent = `<span class="text-orange-500">Réessayez. (${displayScore})</span>`;
+                }
+            }
+
+            // Append transcription if it's the free speak section
+            if (pages[currentPage].type === 'free_speak' && recognizedText) {
+                messageContent += `<div class="text-indigo-600 font-medium mt-1 text-sm">"${recognizedText}"</div>`;
+            }
+            
+            feedbackEl.innerHTML = messageContent;
+
+        } catch (e) {
+            console.error(e);
+            feedbackEl.innerText = "API Error";
+            resetNextButton();
+        }
+    }
+
+    function nextPage() {
+        if (!audioContextInitialized) initAudio();
+        // Play turn sound
+        playPageTurnSound();
+        if (currentPage < pages.length - 1) { currentPage++; renderPage(); }
+    }
+    function prevPage() {
+        // Play turn sound
+        playPageTurnSound();
+        if (currentPage > 0) { currentPage--; renderPage(); }
+    }
+
+    btnNext.addEventListener('click', nextPage);
+    btnPrev.addEventListener('click', prevPage);
+
+    // Initial
+    renderPage();
+</script>
+</body>
+</html>
