@@ -119,7 +119,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 5vh;
+            height: 6vh; /* Slightly taller for touch targets */
             font-family: 'Noto Sans KR', sans-serif;
             font-size: clamp(0.8rem, 2vmin, 1.2rem);
             box-shadow: 0 2px 0 #e5e7eb;
@@ -323,6 +323,7 @@
         if (audioContextInitialized) return;
         try {
             await Tone.start();
+            
             correctSound = new Tone.Synth().toDestination();
             errorSound = new Tone.Synth({
                 oscillator: { type: 'square' },
@@ -330,6 +331,7 @@
             }).toDestination();
             completionSynth = new Tone.PolySynth(Tone.Synth).toDestination();
             pageTurnSynth = new Tone.MembraneSynth().toDestination();
+            
             audioContextInitialized = true;
         } catch (e) {
             console.warn("Audio init failed", e);
@@ -382,7 +384,7 @@
         btnPrev.disabled = pageIndex <= 1;
         btnPrev.classList.toggle('opacity-0', pageIndex <= 1);
         
-        btnNext.disabled = page.type !== 'outro'; // Only enabled by default on outro
+        btnNext.disabled = page.type !== 'outro'; 
         btnNext.classList.toggle('bg-gray-400', page.type !== 'outro');
         btnNext.classList.toggle('bg-indigo-600', page.type === 'outro');
 
@@ -433,7 +435,6 @@
                         <p class="text-sm font-bold text-gray-400 uppercase tracking-wider">${page.instruction}</p>
                         <h2 class="text-fluid-lg font-bold text-indigo-900 korean-text">${page.question}</h2>
                     </div>
-                    <!-- CHANGED: Use grid for choices -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
                         ${optionHtml}
                     </div>
@@ -449,7 +450,6 @@
             playSound('correct');
             btn.classList.add('bg-green-100', 'border-green-500', 'text-green-700');
             feedback.innerHTML = `<span class="text-green-600">Correct !</span>`;
-            // Disable all buttons
             document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
             enableNext();
         } else {
@@ -467,11 +467,15 @@
                         <p class="text-sm font-bold text-gray-400 uppercase tracking-wider">${page.instruction}</p>
                         <h2 class="text-fluid-lg font-bold text-gray-800">${page.question}</h2>
                         
-                        <div class="w-full bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
-                            <p class="text-xl md:text-2xl font-bold text-indigo-900 korean-text mb-4">${page.prompt}</p>
+                        <!-- Reduced padding for mobile input container -->
+                        <div class="w-full bg-indigo-50 p-[3vmin] rounded-2xl border border-indigo-100">
+                            <p class="text-fluid-lg font-bold text-indigo-900 korean-text mb-4">${page.prompt}</p>
                             <div class="flex gap-2">
-                                <input type="text" id="answer-input" class="flex-grow p-3 rounded-lg border-2 border-gray-300 focus:border-indigo-500 outline-none text-center text-xl font-bold korean-text" placeholder="Tapez ici..." autocomplete="off">
-                                <button onclick="checkInput('${page.correct}')" class="px-4 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700">
+                                <!-- inputmode="none" for mobile virtual keyboard use, standard type allowed for physical keyboard -->
+                                <input type="text" id="answer-input" inputmode="none" 
+                                    class="flex-grow p-3 rounded-lg border-2 border-gray-300 focus:border-indigo-500 outline-none text-center text-fluid-lg font-bold korean-text w-full min-w-0" 
+                                    placeholder="Tapez ici..." autocomplete="off">
+                                <button onclick="checkInput('${page.correct.replace(/'/g, "\\'")}')" class="px-4 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 shrink-0">
                                     <i class="ph ph-check text-xl"></i>
                                 </button>
                             </div>
@@ -486,6 +490,9 @@
                 </div>
             </div>
         `;
+        
+        // No additional keydown listener needed for standard behavior, 
+        // inputmode="none" handles mobile keyboard suppression.
     }
 
     function renderKeyboard() {
@@ -504,7 +511,6 @@
             html += `</div>`;
         });
         
-        // Bottom Row
         html += `
             <div class="keyboard-row">
                 <button class="key-btn special" onclick="virtualType('SHIFT')"><i class="ph ph-arrow-fat-up"></i></button>
@@ -518,7 +524,7 @@
     // Virtual Typing Logic using Hangul.js
     let isShifted = false;
     const shiftMap = {'ㅂ':'ㅃ', 'ㅈ':'ㅉ', 'ㄷ':'ㄸ', 'ㄱ':'ㄲ', 'ㅅ':'ㅆ', 'ㅐ':'ㅒ', 'ㅔ':'ㅖ'};
-
+    
     function virtualType(key) {
         const input = document.getElementById('answer-input');
         if (!input) return;
@@ -527,18 +533,13 @@
         
         if (key === 'SHIFT') {
             isShifted = !isShifted;
-            // Visual toggle of keyboard caps can be implemented here if desired
             const buttons = document.querySelectorAll('.key-btn');
             buttons.forEach(btn => {
                 const original = btn.innerText;
-                // If it has a shift pair, toggle.
-                // Simple toggle for display:
                 if (isShifted) {
                     if (shiftMap[original]) btn.innerText = shiftMap[original];
-                    else btn.classList.add('opacity-50'); // Dim unsupported keys
+                    else btn.classList.add('opacity-50');
                 } else {
-                    // Find key by value in shiftMap to revert? Or just re-render.
-                    // Easier: Re-render is safer but heavier. Just manual mapping revert:
                     const reverseMap = {'ㅃ':'ㅂ', 'ㅉ':'ㅈ', 'ㄸ':'ㄷ', 'ㄲ':'ㄱ', 'ㅆ':'ㅅ', 'ㅒ':'ㅐ', 'ㅖ':'ㅔ'};
                     if (reverseMap[original]) btn.innerText = reverseMap[original];
                     btn.classList.remove('opacity-50');
@@ -549,9 +550,7 @@
         
         if (isShifted && shiftMap[key]) {
             char = shiftMap[key];
-            // Reset shift after one char press usually
             isShifted = false; 
-            // Reset visuals
             const buttons = document.querySelectorAll('.key-btn');
             const reverseMap = {'ㅃ':'ㅂ', 'ㅉ':'ㅈ', 'ㄸ':'ㄷ', 'ㄲ':'ㄱ', 'ㅆ':'ㅅ', 'ㅒ':'ㅐ', 'ㅖ':'ㅔ'};
             buttons.forEach(btn => {
@@ -561,7 +560,7 @@
         }
 
         let currentVal = input.value;
-        let jamos = Hangul.disassemble(currentVal); // Disassemble current input
+        let jamos = Hangul.disassemble(currentVal); 
 
         if (key === 'BACK') {
             jamos.pop();
@@ -572,13 +571,13 @@
         }
 
         input.value = Hangul.assemble(jamos);
-        input.focus();
+        // input.focus(); // Removed focus to prevent mobile keyboard from flashing
     }
 
     function checkInput(correctAnswer) {
         const input = document.getElementById('answer-input');
         const feedback = document.getElementById('feedback');
-        // Remove spaces for lenient checking
+        
         const userVal = input.value.replace(/\s+/g, '');
         const correctVal = correctAnswer.replace(/\s+/g, '');
 
@@ -594,7 +593,6 @@
             
             const page = pages[pageIndex];
             
-            // Logic for Hint (2+ fails)
             if (page.hintAudio && wrongAttempts >= 2) {
                  feedbackHTML += `
                     <button id="hint-btn" onclick="playAudioUrl('${page.hintAudio}')" class="ml-2 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs flex items-center gap-1 hover:bg-yellow-200 cursor-pointer transition">
@@ -603,7 +601,6 @@
                 `;
             }
 
-            // Logic for Show Answer (3+ fails)
             if (wrongAttempts >= 3) {
                  feedbackHTML += `
                     <button id="answer-btn" onclick="revealAnswer('${correctAnswer.replace(/'/g, "\\'")}')" class="ml-2 px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs flex items-center gap-1 hover:bg-red-200 cursor-pointer transition">
@@ -650,7 +647,6 @@
         footer.classList.add('hidden');
     }
 
-    // Navigation
     function nextPage() {
         initAudio();
         playSound('turn');
