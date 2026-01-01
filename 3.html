@@ -270,7 +270,7 @@
         {
             type: 'conversation_start',
             instruction: "Posez la question vous-même.",
-            displayPrompt: "[ Quel est votre (pré)nom? ]",
+            displayPrompt: "[ 이름이 뭐예요? ]",
             referenceText: "이름이 뭐예요",
             replyAudio: AUDIO_SENTENCE_JENNIE,
             replyText: "저는 제니예요.",
@@ -282,8 +282,7 @@
             instruction: "Répondez à la question.",
             audioPrompt: AUDIO_SENTENCE_NAME, // Question: 이름이 뭐예요?
             displayHint: "Je suis [Votre Nom].",
-            // referenceText is null for open-ended, but validated by checkKoreanGrammar
-            referenceText: null 
+            referenceText: null // handled by grammar check
         },
         {
             type: 'outro',
@@ -339,6 +338,9 @@
     }
 
     function playAudio(src, onEndCallback) {
+        // Optimization: Stop recording if audio plays to prevent overlap
+        stopRecording(null, true);
+        
         stopCurrentAudio();
         if (!src) {
             console.warn("Audio source missing");
@@ -369,10 +371,7 @@
         container.innerHTML = '';
         const page = pages[currentPage];
         
-        // Initialize page state if not exists
-        if (!pageStates[currentPage]) {
-            pageStates[currentPage] = { attemptsUsed: 0, passed: false };
-        }
+        if (!pageStates[currentPage]) pageStates[currentPage] = { attemptsUsed: 0, passed: false };
 
         pageIndicator.innerText = `${currentPage + 1} / ${pages.length}`;
         
@@ -387,7 +386,6 @@
         btnPrev.disabled = currentPage <= 1;
         btnPrev.classList.toggle('opacity-0', currentPage <= 1);
         
-        // Next button state
         resetNextButton();
         
         switch(page.type) {
@@ -416,35 +414,34 @@
     }
 
     function checkPageState(page) {
-        if (['cover', 'outro'].includes(page.type)) return; // Always enabled
+        if (['cover', 'outro'].includes(page.type)) return;
         
         const state = pageStates[currentPage];
 
-        // Listening choices are handled inside their render (disable next until correct)
         if (page.type === 'listening_choice') {
             if (!state.passed) disableNextButton();
             return;
         }
 
-        // Speaking tasks
         if (state.passed) {
              const feedback = document.getElementById('feedback-msg');
              const recBtn = document.getElementById('rec-btn');
-             if(feedback && !feedback.innerHTML.includes("Excellent")) { // Avoid overwrite if transcription is present
+             if(feedback && !feedback.innerHTML.includes("Excellent")) {
                  feedback.insertAdjacentHTML('afterbegin', `<span class="text-green-500 font-bold block mb-1">Excellent !</span>`);
              }
              if(recBtn) {
                  recBtn.disabled = true;
                  recBtn.innerHTML = `<i class="ph ph-check icon-fluid-md text-green-500"></i>`;
              }
-             // For Conversation Start, showing the reply card is handled in processAudio success
+             if (page.type === 'conversation_start') {
+                 const replyContainer = document.getElementById('reply-container');
+                 if(replyContainer) replyContainer.classList.remove('hidden');
+             }
         } else {
             disableNextButton();
             if (state.attemptsUsed >= 3) {
-                const feedback = document.getElementById('feedback-msg');
-                // Only show failed msg if not already showing transcription logic from processAudio
-                // We'll let processAudio handle the UI text
-                resetNextButton(); 
+                // If failed 3 times, allow pass
+                resetNextButton();
             }
         }
     }
@@ -489,8 +486,6 @@
                 </div>
             </div>
         `;
-        
-        // Auto play question audio - REMOVED per general instruction
     }
 
     function checkChoice(btn, selected, correct) {
@@ -556,7 +551,6 @@
     }
 
     function renderConversationStart(page) {
-        // State check for success view
         const state = pageStates[currentPage];
         const isPassed = state && state.passed;
 
@@ -568,7 +562,6 @@
                     <div class="card-box py-[5vh] space-y-[2vh]">
                         <p class="text-fluid-xl font-bold text-gray-800 korean-text">${page.displayPrompt}</p>
                         
-                        <!-- Success Interaction: Show Reply -->
                         <div id="reply-container" class="${isPassed ? 'block' : 'hidden'} mt-6 pt-6 border-t border-gray-100 w-full animate-fade-in">
                             <div class="flex flex-col items-center gap-2">
                                 <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-2">
@@ -596,11 +589,6 @@
     }
 
     function renderConversationReply(page) {
-        // Auto play prompt
-        if (!pageStates[currentPage].passed && !isRecording) {
-             autoPlayTimer = setTimeout(() => { playAudio(page.audioPrompt); }, 800);
-        }
-
         container.innerHTML = `
             <div class="page-wrapper fade-in">
                 <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
@@ -644,7 +632,6 @@
                 </div>
             </div>
         `;
-        if (page.audio) { autoPlayTimer = setTimeout(() => { playAudio(page.audio); }, 1500); }
         initAudio().then(() => {
              playSound('complete');
              window.parent.postMessage({ type: 'lesson_complete' }, '*');
@@ -681,17 +668,43 @@
             if (attemptsMax && state.attemptsUsed >= attemptsMax && !state.passed) {
                 feedback.innerText = "Nombre de tentatives épuisé.";
                 resetNextButton();
+                // Special logic for Quiz 12 (Conv Start) to show reply even if failed
+                if (page.type === 'conversation_start') {
+                    await processAudio(null, referenceText, feedback, btn, true); 
+                }
                 return;
             }
 
             if (!isRecording) {
                 try {
                     await initAudio(); 
+                    
+                    // Prevent Playing Audio & Recording at same time
+                    stopCurrentAudio();
+                    
+                    // Add loading state
+                    btn.disabled = true;
+                    btn.innerHTML = `<i class="ph ph-spinner animate-spin text-2xl"></i>`;
+
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     mediaRecorder = new MediaRecorder(stream);
                     const audioChunks = [];
                     mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
                     
+                    mediaRecorder.onstart = () => {
+                         btn.disabled = false;
+                         isRecording = true;
+                         btn.classList.add('recording-pulse', 'bg-red-500', 'text-white', 'border-red-500');
+                         btn.classList.remove('bg-white', 'text-indigo-600', 'border-gray-100');
+                         btn.innerHTML = `<i class="ph ph-stop icon-fluid-md"></i>`;
+                         feedback.innerText = "Écoute en cours...";
+                         // 10s auto stop logic
+                         if (recordingTimeout) clearTimeout(recordingTimeout);
+                         recordingTimeout = setTimeout(() => { 
+                            if (isRecording) stopRecording(btn); 
+                         }, 10000);
+                    };
+
                     mediaRecorder.onstop = async () => {
                         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                         const reader = new FileReader();
@@ -703,16 +716,14 @@
                         };
                         stream.getTracks().forEach(track => track.stop());
                     };
+                    
                     mediaRecorder.start();
-                    isRecording = true;
-                    btn.classList.add('recording-pulse', 'bg-red-500', 'text-white', 'border-red-500');
-                    btn.classList.remove('bg-white', 'text-indigo-600', 'border-gray-100');
-                    btn.innerHTML = `<i class="ph ph-stop icon-fluid-md"></i>`;
-                    feedback.innerText = "Écoute en cours...";
-                    setTimeout(() => { if (isRecording) stopRecording(btn); }, 10000);
+
                 } catch (err) {
                     console.error("Mic Error:", err);
                     feedback.innerText = "Erreur micro.";
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="ph ph-microphone icon-fluid-lg"></i>`;
                 }
             } else {
                 stopRecording(btn);
@@ -721,8 +732,11 @@
     }
 
     function stopRecording(btn, force = false) {
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-        clearTimeout(recordingTimeout);
+        if (recordingTimeout) clearTimeout(recordingTimeout);
+        
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+        }
         isRecording = false;
         
         if (btn && !force) {
@@ -763,51 +777,60 @@
         return false;
     }
 
-    async function processAudio(audioBase64, referenceText, feedbackEl, btnEl) {
-        feedbackEl.innerText = "Analyse...";
+    async function processAudio(audioBase64, referenceText, feedbackEl, btnEl, forceFail = false) {
+        if (!forceFail) feedbackEl.innerText = "Analyse...";
+        
+        let result = { text: "" };
+        let score = 0;
+        let passed = false;
+
         try {
-            const payload = { audioBase64: audioBase64, languageCode: "Kor" };
-            if (referenceText) payload.referenceText = referenceText;
+            if (!forceFail && audioBase64) {
+                const payload = { audioBase64: audioBase64, languageCode: "Kor" };
+                if (referenceText) payload.referenceText = referenceText;
 
-            const res = await fetch(CLOVA_API_FUNCTION_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+                const res = await fetch(CLOVA_API_FUNCTION_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-            if (!res.ok) throw new Error("API Error");
-            const result = await res.json();
-            
-            const recognizedText = result.text; 
-            let passed = false;
-            const score = result.assessment?.pronunciation_score;
+                if (!res.ok) throw new Error("API Error");
+                result = await res.json();
+                score = result.assessment?.pronunciation_score;
+            }
 
-            const normalize = (str) => str ? str.replace(/[\s\.\,\?\!]/g, "") : "";
-
+            const recognizedText = result.text || "";
             const page = pages[currentPage];
+            const displayScore = score !== undefined ? score : '-';
 
-            // Validate based on type
-            if (page.type === 'conversation_reply') {
-                passed = checkKoreanGrammar(recognizedText);
-            } else if (referenceText) {
-                const scorePass = score >= 80;
-                const textPass = recognizedText && normalize(recognizedText) === normalize(referenceText);
-                if (scorePass && textPass) passed = true; 
-            } else {
-                if (recognizedText || score >= 0) passed = true; 
+            // --- Validation Logic ---
+            if (!forceFail) {
+                if (page.type === 'conversation_reply') {
+                    passed = checkKoreanGrammar(recognizedText);
+                } else if (referenceText) { 
+                    // Normalize and Compare
+                    const normalize = (str) => str ? str.replace(/[\s\.\,\?\!]/g, "") : "";
+                    const scorePass = score >= 80;
+                    const textPass = recognizedText && normalize(recognizedText) === normalize(referenceText);
+                    if (scorePass && textPass) passed = true; 
+                } else { 
+                    if (recognizedText || score >= 0) passed = true; 
+                }
             }
 
             const state = pageStates[currentPage];
-            const displayScore = score !== undefined ? score : '-';
-
             let msg = "";
+
             if (passed) {
                 state.passed = true;
                 playSound('correct'); 
                 const scoreText = page.type === 'conversation_reply' ? '' : ` (${displayScore})`;
                 msg = `<span class="text-green-500 font-bold block mb-1">Excellent !${scoreText}</span>`;
-                btnEl.disabled = true;
-                btnEl.innerHTML = `<i class="ph ph-check icon-fluid-md text-green-500"></i>`;
+                if(btnEl) {
+                    btnEl.disabled = true;
+                    btnEl.innerHTML = `<i class="ph ph-check icon-fluid-md text-green-500"></i>`;
+                }
                 resetNextButton();
 
                 if (page.type === 'conversation_start') {
@@ -817,8 +840,8 @@
                 }
 
             } else {
-                if (state.attemptsUsed >= (page.attempts || 3)) {
-                     msg = `<span class="text-orange-500 block mb-1">Nombre de tentatives épuisé. (${displayScore})</span>`;
+                if (state.attemptsUsed >= (page.attempts || 3) || forceFail) {
+                     msg = `<span class="text-orange-500 block mb-1">Nombre de tentatives épuisé.</span>`;
                      resetNextButton();
                 } else {
                      msg = `<span class="text-orange-500 block mb-1">Réessayez. (${displayScore})</span>`;
@@ -828,14 +851,30 @@
             if (recognizedText) {
                 msg += `<div class="text-indigo-600 font-medium mt-1 text-sm">"${recognizedText}"</div>`;
             }
-            
-            // Show Hint only for specific types (NOT shadowing)
-            // page.audioPrompt exists in shadowing but we don't want extra button there as it has one already
-            const isShadowing = page.type === 'shadowing';
 
-            if (!passed && page.audioPrompt && !isShadowing) {
+            // Hint Logic (Not for Shadowing/Repeat pages which already have buttons)
+            const isShadowing = page.type === 'shadowing';
+            
+            if ((!passed || forceFail) && page.audioPrompt && !isShadowing) {
                  window.playHint = () => playAudio(page.audioPrompt);
                  msg += `<button onclick="playHint()" class="mt-2 flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs hover:bg-yellow-200 mx-auto transition"><i class="ph ph-speaker-high"></i> Réécouter</button>`;
+            }
+
+            // Quiz 12 (Conv Start) Special: Show Reply Card
+            if (page.type === 'conversation_start' && (passed || state.attemptsUsed >= 3)) {
+                msg += `
+                    <div class="mt-6 pt-6 border-t border-gray-100 w-full animate-fade-in">
+                        <div class="flex flex-col items-center gap-3">
+                            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                                <i class="ph ph-user-circle text-2xl"></i>
+                            </div>
+                            <button onclick="playAudio('${page.replyAudio}')" class="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-2xl hover:bg-gray-200 transition text-gray-800 font-bold text-lg korean-text shadow-sm">
+                                <i class="ph ph-speaker-high text-indigo-500"></i>
+                                ${page.replyText}
+                            </button>
+                        </div>
+                    </div>
+                `;
             }
 
             feedbackEl.innerHTML = msg;
@@ -843,7 +882,8 @@
         } catch (e) {
             console.error(e);
             feedbackEl.innerText = "API Error";
-            resetNextButton();
+            // Allow retry on API error
+            if(btnEl) btnEl.disabled = false; 
         }
     }
 
