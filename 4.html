@@ -227,23 +227,23 @@
             attempts: 3,
             cardAudio: AUDIO.WHAT
         },
-        // Page 6: Repeat (직업이 뭐예요?)
+        // Page 6: Repeat (직업이 뭐예요?) - Updated Colors Correctly
         {
             type: 'repeat',
             instruction: "Maintenant, combinons ces deux parties pour poser la question.",
-            mainText: "<span class='text-blue-600'>직업</span>이 <span class='text-rose-500'>뭐</span><span class='text-green-600'>예요</span>?",
-            sub1: "<span class='text-blue-600'>Quel</span> est votre <span class='text-blue-600'>métier</span> ?",
+            mainText: "<span class='text-blue-600'>직업</span>이 <span class='text-red-600'>뭐</span><span class='text-green-600'>예요</span>?",
+            sub1: "<span class='text-red-600'>Quel</span> <span class='text-green-600'>est</span> votre <span class='text-blue-600'>métier</span> ?",
             sub2: "Quel est votre métier ?",
             referenceText: "직업이 뭐예요",
             attempts: 3,
             cardAudio: AUDIO.Q_JOB
         },
-        // Page 7: Repeat (직업이 뭐예요? - Again)
+        // Page 7: Repeat (직업이 뭐예요? - Again) - Updated Colors Correctly
         {
             type: 'repeat',
             instruction: "Essayez encore une fois.",
-            mainText: "<span class='text-blue-600'>직업</span>이 <span class='text-rose-500'>뭐</span><span class='text-green-600'>예요</span>?",
-            sub1: "<span class='text-blue-600'>Quel</span> est votre <span class='text-blue-600'>métier</span> ?",
+            mainText: "<span class='text-blue-600'>직업</span>이 <span class='text-red-600'>뭐</span><span class='text-green-600'>예요</span>?",
+            sub1: "<span class='text-red-600'>Quel</span> <span class='text-green-600'>est</span> votre <span class='text-blue-600'>métier</span> ?",
             sub2: "Quel est votre métier ?",
             referenceText: "직업이 뭐예요",
             attempts: 3,
@@ -295,8 +295,8 @@
         // Page 12: Card Audio (저는 학생이에요)
         {
             type: 'card_audio',
-            mainText: "저는 <span class='text-blue-600'>학생</span><span class='text-rose-500'>이에요</span>.",
-            sub1: "Je <span class='text-rose-500'>suis</span> <span class='text-blue-600'>étudiant(e)</span>.",
+            mainText: "<span class='text-blue-600'>저</span>는 <span class='text-red-600'>학생</span><span class='text-green-600'>이에요</span>.", 
+            sub1: "<span class='text-blue-600'>Je</span> <span class='text-green-600'>suis</span> <span class='text-red-600'>étudiant(e)</span>.",
             sub2: "Je suis étudiant(e).",
             text: "Si le dernier caractère du complément du sujet se termine par une consonne, \"이다\" se conjugue en \"이에요\".",
             audio: AUDIO.EXP_5,
@@ -306,8 +306,8 @@
         {
             type: 'repeat',
             instruction: "Répétez après moi.",
-            mainText: "저는 <span class='text-blue-600'>학생</span><span class='text-rose-500'>이에요</span>.",
-            sub1: "Je <span class='text-rose-500'>suis</span> <span class='text-blue-600'>étudiant(e)</span>.",
+            mainText: "<span class='text-blue-600'>저</span>는 <span class='text-red-600'>학생</span><span class='text-green-600'>이에요</span>.",
+            sub1: "<span class='text-blue-600'>Je</span> <span class='text-green-600'>suis</span> <span class='text-red-600'>étudiant(e)</span>.",
             sub2: "Je suis étudiant(e).",
             referenceText: "저는 학생이에요",
             attempts: 3,
@@ -331,8 +331,7 @@
             mainText: "Quel est votre métier ?",
             hint: "(직업이 뭐예요? 라고 말해야 통과)",
             referenceText: "직업이 뭐예요",
-            hiddenHint: true,
-            hintAudio: AUDIO.Q_JOB // HINT ADDED
+            hiddenHint: true
         },
         // Page 16: Quiz Response (의사)
         {
@@ -752,17 +751,7 @@
             const recognizedText = result.text; 
             let passed = false;
             const score = result.assessment?.pronunciation_score;
-
-            // Normalize strings for comparison (remove spaces and punctuation)
-            const normalize = (str) => str ? str.replace(/[\s\.\,\?\!]/g, "") : "";
-
-            if (referenceText) { 
-                const scorePass = score >= 80;
-                // Strict text check: pass only if recognized text matches reference text (ignoring spaces/punctuation)
-                const textPass = recognizedText && normalize(recognizedText) === normalize(referenceText);
-                
-                if (scorePass && textPass) passed = true; 
-            }
+            if (referenceText) { if (score >= 80) passed = true; }
             else { if (result.text || score >= 0) passed = true; }
 
             const state = pageStates[currentPage];
