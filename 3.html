@@ -10,6 +10,8 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- Tone.js for Sound Effects -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Hangul.js for Grammar Check -->
+    <script src="https://unpkg.com/hangul-js" type="text/javascript"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
@@ -151,7 +153,8 @@
     // --- Configuration ---
     const BASE_44_ORIGIN = "https://coreeno.base44.app"; 
     const CLOVA_API_FUNCTION_URL = BASE_44_ORIGIN + '/api/functions/naverClovaSpeech';
-    
+    const PLACEHOLDER_AUDIO = ""; // Used for missing files
+
     // Audio Links
     const AUDIO_NAME = "https://res.cloudinary.com/de76i94ia/video/upload/v1766933258/%E1%84%8B%E1%85%B5%E1%84%85%E1%85%B3%E1%86%B7_g9gzd3.mp3";
     const AUDIO_JE_TOPIC = "https://res.cloudinary.com/de76i94ia/video/upload/v1766933257/%E1%84%8C%E1%85%A5%E1%84%82%E1%85%B3%E1%86%AB_cisbyn.mp3";
@@ -247,7 +250,7 @@
             referenceText: "저는 요한이에요",
             audioPrompt: AUDIO_SENTENCE_YOHAN // For hint
         },
-        // Quiz 10 (Listening - Julie) - Updated Audio
+        // Quiz 10 (Listening - Julie)
         {
             type: 'listening_choice',
             instruction: "Comment s'appelle cette personne ?",
@@ -255,7 +258,7 @@
             options: ["Jennie", "Julie", "Julien"],
             correct: "Julie"
         },
-        // Quiz 11 (Listening - Subin) - Updated Content & Audio
+        // Quiz 11 (Listening - Subin)
         {
             type: 'listening_choice',
             instruction: "Comment s'appelle cette personne ?",
@@ -263,7 +266,7 @@
             options: ["Subin", "Seb", "Somin"],
             correct: "Subin"
         },
-        // Quiz 12 (Direct Question + Auto Reply) - Updated Text
+        // Quiz 12 (Direct Question + Auto Reply)
         {
             type: 'conversation_start',
             instruction: "Posez la question vous-même.",
@@ -279,8 +282,8 @@
             instruction: "Répondez à la question.",
             audioPrompt: AUDIO_SENTENCE_NAME, // Question: 이름이 뭐예요?
             displayHint: "Je suis [Votre Nom].",
-            // referenceText is null for open-ended
-            referenceText: null
+            // referenceText is null for open-ended, but validated by checkKoreanGrammar
+            referenceText: null 
         },
         {
             type: 'outro',
@@ -361,7 +364,7 @@
 
     function renderPage() {
         stopCurrentAudio();
-        stopRecording(null, true); // Force stop recording on page change
+        stopRecording(null, true); 
 
         container.innerHTML = '';
         const page = pages[currentPage];
@@ -428,12 +431,13 @@
              const feedback = document.getElementById('feedback-msg');
              const recBtn = document.getElementById('rec-btn');
              if(feedback && !feedback.innerHTML.includes("Excellent")) { // Avoid overwrite if transcription is present
-                 feedback.innerHTML = `<span class="text-green-500 font-bold">Excellent !</span>`;
+                 feedback.insertAdjacentHTML('afterbegin', `<span class="text-green-500 font-bold block mb-1">Excellent !</span>`);
              }
              if(recBtn) {
                  recBtn.disabled = true;
                  recBtn.innerHTML = `<i class="ph ph-check icon-fluid-md text-green-500"></i>`;
              }
+             // For Conversation Start, showing the reply card is handled in processAudio success
         } else {
             disableNextButton();
             if (state.attemptsUsed >= 3) {
@@ -485,7 +489,8 @@
                 </div>
             </div>
         `;
-        // NO AUTO PLAY
+        
+        // Auto play question audio - REMOVED per general instruction
     }
 
     function checkChoice(btn, selected, correct) {
@@ -580,7 +585,9 @@
                         <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
                             <i class="ph ph-microphone icon-fluid-lg"></i>
                         </button>
-                        <div id="feedback-msg" class="min-h-[3vh] text-fluid-sm font-medium text-gray-500 flex flex-col items-center justify-center">Appuyez pour parler</div>
+                        <div id="feedback-msg" class="min-h-[3vh] text-fluid-sm font-medium text-gray-500 flex flex-col items-center justify-center w-full">
+                            Appuyez pour parler
+                        </div>
                     </div>
                 </div>
             </div>
@@ -589,6 +596,11 @@
     }
 
     function renderConversationReply(page) {
+        // Auto play prompt
+        if (!pageStates[currentPage].passed && !isRecording) {
+             autoPlayTimer = setTimeout(() => { playAudio(page.audioPrompt); }, 800);
+        }
+
         container.innerHTML = `
             <div class="page-wrapper fade-in">
                 <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
@@ -606,7 +618,7 @@
                         <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
                             <i class="ph ph-microphone icon-fluid-lg"></i>
                         </button>
-                        <div id="feedback-msg" class="min-h-[3vh] text-fluid-sm font-medium text-gray-500 flex flex-col items-center justify-center">
+                        <div id="feedback-msg" class="min-h-[3vh] text-fluid-sm font-medium text-gray-500 flex flex-col items-center justify-center w-full">
                             Dites votre nom complet
                         </div>
                     </div>
@@ -632,7 +644,7 @@
                 </div>
             </div>
         `;
-        // NO AUTO PLAY AUDIO
+        if (page.audio) { autoPlayTimer = setTimeout(() => { playAudio(page.audio); }, 1500); }
         initAudio().then(() => {
              playSound('complete');
              window.parent.postMessage({ type: 'lesson_complete' }, '*');
@@ -666,17 +678,13 @@
         if (state.passed) { btn.disabled = true; return; }
 
         btn.onclick = async () => {
-            // Check attempts
             if (attemptsMax && state.attemptsUsed >= attemptsMax && !state.passed) {
-                // Allow user to try anyway? No, spec says "Max 3 tries". 
-                // But usually we allow them to proceed.
-                feedback.innerHTML = `<span class="text-orange-500">Nombre de tentatives épuisé.</span>`;
+                feedback.innerText = "Nombre de tentatives épuisé.";
                 resetNextButton();
                 return;
             }
 
             if (!isRecording) {
-                // START RECORDING
                 try {
                     await initAudio(); 
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -700,28 +708,20 @@
                     btn.classList.add('recording-pulse', 'bg-red-500', 'text-white', 'border-red-500');
                     btn.classList.remove('bg-white', 'text-indigo-600', 'border-gray-100');
                     btn.innerHTML = `<i class="ph ph-stop icon-fluid-md"></i>`;
-                    feedback.innerText = "Écoute en cours... (Appuyez pour arrêter)";
-                    
-                    // Auto-stop after 10s
-                    recordingTimeout = setTimeout(() => { 
-                        if (isRecording) stopRecording(btn); 
-                    }, 10000);
-
+                    feedback.innerText = "Écoute en cours...";
+                    setTimeout(() => { if (isRecording) stopRecording(btn); }, 10000);
                 } catch (err) {
                     console.error("Mic Error:", err);
                     feedback.innerText = "Erreur micro.";
                 }
             } else {
-                // STOP RECORDING (Toggle)
                 stopRecording(btn);
             }
         };
     }
 
     function stopRecording(btn, force = false) {
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-            mediaRecorder.stop();
-        }
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
         clearTimeout(recordingTimeout);
         isRecording = false;
         
@@ -730,6 +730,37 @@
             btn.classList.add('bg-white', 'text-indigo-600', 'border-gray-100');
             btn.innerHTML = `<i class="ph ph-microphone icon-fluid-lg"></i>`;
         }
+    }
+
+    // --- Grammar Check for Quiz 13 ---
+    function checkKoreanGrammar(text) {
+        if (!text) return false;
+        
+        const endsWithYeyo = text.endsWith('예요');
+        const endsWithIyeyo = text.endsWith('이에요');
+        
+        if (!endsWithYeyo && !endsWithIyeyo) return false;
+
+        const jamos = Hangul.disassemble(text);
+        if (jamos.length < 3) return false;
+
+        let noun = "";
+        if (endsWithYeyo) noun = text.slice(0, -2); 
+        else noun = text.slice(0, -3); 
+        
+        if (!noun) return false;
+        if (!text.startsWith("저는")) return false; 
+        
+        const lastChar = noun[noun.length - 1];
+        const hasPatchim = Hangul.endsWithConsonant(lastChar);
+        
+        if (endsWithYeyo) {
+            if (!hasPatchim) return true;
+        } else if (endsWithIyeyo) {
+             if (hasPatchim) return true;
+        }
+        
+        return false;
     }
 
     async function processAudio(audioBase64, referenceText, feedbackEl, btnEl) {
@@ -747,26 +778,38 @@
             if (!res.ok) throw new Error("API Error");
             const result = await res.json();
             
-            const recognizedText = result.text || "(Pas de parole)"; 
+            const recognizedText = result.text; 
             let passed = false;
             const score = result.assessment?.pronunciation_score;
-            if (referenceText) { if (score >= 80) passed = true; }
-            else { if (result.text || score >= 0) passed = true; }
+
+            const normalize = (str) => str ? str.replace(/[\s\.\,\?\!]/g, "") : "";
+
+            const page = pages[currentPage];
+
+            // Validate based on type
+            if (page.type === 'conversation_reply') {
+                passed = checkKoreanGrammar(recognizedText);
+            } else if (referenceText) {
+                const scorePass = score >= 80;
+                const textPass = recognizedText && normalize(recognizedText) === normalize(referenceText);
+                if (scorePass && textPass) passed = true; 
+            } else {
+                if (recognizedText || score >= 0) passed = true; 
+            }
 
             const state = pageStates[currentPage];
             const displayScore = score !== undefined ? score : '-';
-            const page = pages[currentPage];
 
             let msg = "";
             if (passed) {
                 state.passed = true;
                 playSound('correct'); 
-                msg = `<span class="text-green-500 font-bold">Excellent ! (${displayScore})</span>`;
+                const scoreText = page.type === 'conversation_reply' ? '' : ` (${displayScore})`;
+                msg = `<span class="text-green-500 font-bold block mb-1">Excellent !${scoreText}</span>`;
                 btnEl.disabled = true;
                 btnEl.innerHTML = `<i class="ph ph-check icon-fluid-md text-green-500"></i>`;
                 resetNextButton();
 
-                // Special Logic for Conversation Start (Quiz 12)
                 if (page.type === 'conversation_start') {
                     const replyContainer = document.getElementById('reply-container');
                     if(replyContainer) replyContainer.classList.remove('hidden');
@@ -775,20 +818,22 @@
 
             } else {
                 if (state.attemptsUsed >= (page.attempts || 3)) {
-                     msg = `<span class="text-orange-500">Tentatives épuisées. (${displayScore})</span>`;
+                     msg = `<span class="text-orange-500 block mb-1">Nombre de tentatives épuisé. (${displayScore})</span>`;
                      resetNextButton();
                 } else {
-                     msg = `<span class="text-orange-500">Réessayez. (${displayScore})</span>`;
+                     msg = `<span class="text-orange-500 block mb-1">Réessayez. (${displayScore})</span>`;
                 }
             }
-
-            // Always Append transcription
-            msg += `<div class="text-indigo-600 font-medium mt-1 text-sm">"${recognizedText}"</div>`;
             
-            // Show Hint button if failed and audio hint available (using audioPrompt as hint)
-            if (!passed && page.audioPrompt) {
-                 // Add hint button to msg
-                 // We use a global function name for simplicity in string injection
+            if (recognizedText) {
+                msg += `<div class="text-indigo-600 font-medium mt-1 text-sm">"${recognizedText}"</div>`;
+            }
+            
+            // Show Hint only for specific types (NOT shadowing)
+            // page.audioPrompt exists in shadowing but we don't want extra button there as it has one already
+            const isShadowing = page.type === 'shadowing';
+
+            if (!passed && page.audioPrompt && !isShadowing) {
                  window.playHint = () => playAudio(page.audioPrompt);
                  msg += `<button onclick="playHint()" class="mt-2 flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs hover:bg-yellow-200 mx-auto transition"><i class="ph ph-speaker-high"></i> Réécouter</button>`;
             }
