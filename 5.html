@@ -87,7 +87,8 @@
             border: 1px solid #e5e7eb;
             border-radius: 1.5rem;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-            padding: clamp(1.5rem, 4vmin, 3rem);
+            /* Reduced padding for mobile optimization */
+            padding: clamp(1rem, 3vmin, 3rem);
             width: 100%;
             max-width: 800px;
             display: flex;
@@ -119,7 +120,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 5vh;
+            height: 6vh; /* Slightly taller for touch targets */
             font-family: 'Noto Sans KR', sans-serif;
             font-size: clamp(0.8rem, 2vmin, 1.2rem);
             box-shadow: 0 2px 0 #e5e7eb;
@@ -296,7 +297,7 @@
             question: "[ 저는 학생이에요 ]",
             instruction: "Qu'est-ce que ça veut dire ?",
             options: ["C’est un étudiant.", "Je suis étudiant.", "Le métier est étudiant."],
-            correct: "Je suis étudiant."
+            correct: "Je suis étudiant"
         },
         // Quiz 12
         {
@@ -489,11 +490,15 @@
                         <p class="text-sm font-bold text-gray-400 uppercase tracking-wider">${page.instruction}</p>
                         <h2 class="text-fluid-lg font-bold text-gray-800">${page.question}</h2>
                         
-                        <div class="w-full bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
-                            <p class="text-xl md:text-2xl font-bold text-indigo-900 korean-text mb-4">${page.prompt}</p>
+                        <!-- Reduced padding for mobile input container -->
+                        <div class="w-full bg-indigo-50 p-[3vmin] rounded-2xl border border-indigo-100">
+                            <p class="text-fluid-lg font-bold text-indigo-900 korean-text mb-4">${page.prompt}</p>
                             <div class="flex gap-2">
-                                <input type="text" id="answer-input" class="flex-grow p-3 rounded-lg border-2 border-gray-300 focus:border-indigo-500 outline-none text-center text-xl font-bold korean-text" placeholder="Tapez ici..." autocomplete="off">
-                                <button onclick="checkInput('${page.correct.replace(/'/g, "\\'")}')" class="px-4 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700">
+                                <!-- inputmode="none" for mobile virtual keyboard use, standard type allowed for physical keyboard -->
+                                <input type="text" id="answer-input" inputmode="none" 
+                                    class="flex-grow p-3 rounded-lg border-2 border-gray-300 focus:border-indigo-500 outline-none text-center text-fluid-lg font-bold korean-text w-full min-w-0" 
+                                    placeholder="Tapez ici..." autocomplete="off">
+                                <button onclick="checkInput('${page.correct.replace(/'/g, "\\'")}')" class="px-4 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 shrink-0">
                                     <i class="ph ph-check text-xl"></i>
                                 </button>
                             </div>
@@ -536,9 +541,10 @@
         return html;
     }
 
+    // Virtual Typing Logic using Hangul.js
     let isShifted = false;
     const shiftMap = {'ㅂ':'ㅃ', 'ㅈ':'ㅉ', 'ㄷ':'ㄸ', 'ㄱ':'ㄲ', 'ㅅ':'ㅆ', 'ㅐ':'ㅒ', 'ㅔ':'ㅖ'};
-
+    
     function virtualType(key) {
         const input = document.getElementById('answer-input');
         if (!input) return;
@@ -581,18 +587,23 @@
         } else if (key === 'SPACE') {
             jamos.push(' ');
         } else {
-            jamos.push(char);
+            // Check if key is a composed Hangul syllable (from physical IME)
+            if (Hangul.isHangul(char)) {
+                 const newJamos = Hangul.disassemble(char);
+                 jamos = jamos.concat(newJamos);
+            } else {
+                 jamos.push(char);
+            }
         }
 
         input.value = Hangul.assemble(jamos);
-        input.focus();
+        // input.focus(); // Removed to prevent mobile keyboard
     }
 
     function checkInput(correctAnswer) {
         const input = document.getElementById('answer-input');
         const feedback = document.getElementById('feedback');
         
-        // Normalize: remove spaces for checking
         const userVal = input.value.replace(/\s+/g, '');
         const correctVal = correctAnswer.replace(/\s+/g, '');
 
@@ -608,7 +619,6 @@
             
             const page = pages[pageIndex];
             
-            // Logic for Hint (2+ fails)
             if (page.hintAudio && wrongAttempts >= 2) {
                  feedbackHTML += `
                     <button id="hint-btn" onclick="playAudioUrl('${page.hintAudio}')" class="ml-2 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs flex items-center gap-1 hover:bg-yellow-200 cursor-pointer transition">
@@ -617,7 +627,6 @@
                 `;
             }
 
-            // Logic for Show Answer (3+ fails)
             if (wrongAttempts >= 3) {
                  feedbackHTML += `
                     <button id="answer-btn" onclick="revealAnswer('${correctAnswer.replace(/'/g, "\\'")}')" class="ml-2 px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs flex items-center gap-1 hover:bg-red-200 cursor-pointer transition">
