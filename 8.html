@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Parler de soi - Leçon 8</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Tone.js for Sound Effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Hangul.js for Grammar Check -->
+    <script src="https://unpkg.com/hangul-js" type="text/javascript"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+        :root {
+            --unit: 1vmin; 
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .korean-text {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        #app-container {
+            background-color: white;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Desktop: 16:9 Ratio */
+        @media (min-width: 1024px) {
+            #app-container {
+                aspect-ratio: 16/9;
+                width: auto;
+                height: 100vh;
+                max-width: 177.78vh;
+                box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            }
+            html { font-size: 2.5vh; } 
+        }
+
+        /* Mobile */
+        @media (max-width: 1023px) {
+            #app-container {
+                width: 100%;
+                height: 100%;
+            }
+            html { font-size: 16px; }
+        }
+
+        .page-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(2vh, 4vmin, 4vh) clamp(2vw, 4vmin, 4vw);
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .card-box {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            padding: clamp(1.5rem, 4vmin, 3rem);
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            flex-shrink: 1;
+            max-height: 100%;
+            overflow-y: auto;
+        }
+
+        .text-fluid-xl { font-size: clamp(1.5rem, 5vmin, 4rem); }
+        .text-fluid-lg { font-size: clamp(1.2rem, 3.5vmin, 2.5rem); }
+        .text-fluid-base { font-size: clamp(1rem, 2.5vmin, 1.5rem); }
+        .text-fluid-sm { font-size: clamp(0.875rem, 2vmin, 1.25rem); }
+        .icon-fluid-md { font-size: clamp(1.5rem, 4vmin, 3rem); }
+        .icon-fluid-lg { font-size: clamp(2rem, 6vmin, 5rem); }
+        
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+        .recording-pulse { animation: pulse-red 1.5s infinite; }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .nav-btn {
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        @media (min-width: 1024px) {
+            .nav-btn { width: 5rem; height: 5rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <div id="header" class="absolute top-0 right-0 p-4 md:p-6 z-20 hidden">
+        <span id="page-indicator" class="font-mono text-gray-400 font-bold text-fluid-sm bg-gray-100 px-3 py-1 rounded-full">1 / 18</span>
+    </div>
+
+    <div id="content-area" class="flex-grow flex flex-col items-center justify-center w-full h-full relative text-center"></div>
+
+    <div id="footer" class="absolute bottom-0 w-full p-6 md:p-8 flex justify-between items-end z-20 pointer-events-none hidden">
+        <button id="btn-prev" class="nav-btn bg-gray-100 text-gray-500 hover:bg-gray-200 pointer-events-auto">
+            <i class="ph ph-arrow-left icon-fluid-md"></i>
+        </button>
+        <button id="btn-next" class="nav-btn bg-indigo-600 text-white hover:bg-indigo-700 pointer-events-auto">
+            <i class="ph ph-arrow-right icon-fluid-md"></i>
+        </button>
+    </div>
+</div>
+
+<script>
+    // --- Configuration ---
+    const BASE_44_ORIGIN = "https://coreeno.base44.app"; 
+    const CLOVA_API_FUNCTION_URL = BASE_44_ORIGIN + '/api/functions/naverClovaSpeech';
+    
+    // Audio Resources
+    const AUDIO = {
+        WHICH: "https://res.cloudinary.com/de76i94ia/video/upload/v1767267944/%E1%84%8B%E1%85%A5%E1%84%82%E1%85%B3_xyjhht.mp3",
+        COUNTRY: "https://res.cloudinary.com/de76i94ia/video/upload/v1767267935/%E1%84%82%E1%85%A1%E1%84%85%E1%85%A1_x1w0np.mp3",
+        WHICH_COUNTRY: "https://res.cloudinary.com/de76i94ia/video/upload/v1767267946/%E1%84%8B%E1%85%A5%E1%84%82%E1%85%B3_%E1%84%82%E1%85%A1%E1%84%85%E1%85%A1_rgjsfu.mp3",
+        PERSON: "https://res.cloudinary.com/de76i94ia/video/upload/v1767267940/%E1%84%89%E1%85%A1%E1%84%85%E1%85%A1%E1%86%B7_iqpmzj.mp3",
+        IS_PERSON: "https://res.cloudinary.com/de76i94ia/video/upload/v1767267942/%E1%84%89%E1%85%A1%E1%84%85%E1%85%A1%E1%86%B7%E1%84%8B%E1%85%B5%E1%84%8B%E1%85%A6%E1%84%8B%E1%85%AD_wjuqan.mp3",
+        Q_NATIONALITY: "https://res.cloudinary.com/de76i94ia/video/upload/v1767267929/sentence_1_mvn2bf.mp3", 
+        FRANCE: "https://res.cloudinary.com/de76i94ia/video/upload/v1767267949/%E1%84%91%E1%85%B3%E1%84%85%E1%85%A1%E1%86%BC%E1%84%89%E1%85%B3_bdehoj.mp3",
+        FRENCH_PERSON: "https://res.cloudinary.com/de76i94ia/video/upload/v1767267947/%E1%84%91%E1%85%B3%E1%84%85%E1%85%A1%E1%86%BC%E1%84%89%E1%85%B3_%E1%84%89%E1%85%A1%E1%84%85%E1%85%A1%E1%86%B7_kq8yws.mp3",
+        AM_FRENCH: "https://res.cloudinary.com/de76i94ia/video/upload/v1767267930/Sentence_2_e1c6t2.mp3", 
+        AM_KOREAN: "https://res.cloudinary.com/de76i94ia/video/upload/v1767267932/Sentence_3_wqx4my.mp3", 
+
+        EXP_1: "https://res.cloudinary.com/de76i94ia/video/upload/v1767267923/audio_1_sgfh2d.mp3",
+        EXP_2: "https://res.cloudinary.com/de76i94ia/video/upload/v1767267923/audio_2_e3oydt.mp3",
+        EXP_3: "https://res.cloudinary.com/de76i94ia/video/upload/v1767267924/audio_3_s6fg5h.mp3",
+        EXP_4: "https://res.cloudinary.com/de76i94ia/video/upload/v1767267926/audio_4_n5h8sb.mp3",
+        EXP_5: "https://res.cloudinary.com/de76i94ia/video/upload/v1767267927/audio_5_nlwehu.mp3"
+    };
+
+    const pages = [
+        {
+            type: 'cover',
+            title: "Chapitre 3: Demander et dire son origine",
+            subtitle: "Leçon 8 : Comment demander et dire son origine",
+            buttonText: "Commencer"
+        },
+        // Page 1: Text
+        {
+            type: 'text',
+            text: "Bonjour ! Bienvenue dans le chapitre 3. Dans ce chapitre, nous allons pratiquer comment demander le pays d'origine de quelqu'un et comment exprimer votre propre origine.",
+            audio: AUDIO.EXP_1
+        },
+        // Page 2: Double Card
+        {
+            type: 'double_card',
+            items: [
+                { text: "어느", sub1: "", sub2: "Quel", audio: AUDIO.WHICH },
+                { text: "나라", sub1: "", sub2: "Pays", audio: AUDIO.COUNTRY }
+            ],
+            text: "« 어느 » est un mot interrogatif qui demande \"quel\" ou \"lequel\", et ne peut être utilisé que avec un nom suivi, comme dans « 어느 나라 » (quel pays).<br><br>Attention : « 무엇(뭐) »(quoi) ne s'utilise que lorsqu'il peut être employé seul comme sujet ou complément d'objet direct. Aucun autre nom ne peut suivre \"무엇(뭐)\".",
+            audio: AUDIO.EXP_2
+        },
+        // Page 3: Repeat (어느)
+        {
+            type: 'repeat',
+            instruction: "Répétez après moi.",
+            mainText: "어느",
+            sub1: "",
+            sub2: "Quel",
+            referenceText: "어느",
+            attempts: 3,
+            cardAudio: AUDIO.WHICH
+        },
+        // Page 4: Repeat (나라)
+        {
+            type: 'repeat',
+            instruction: "Répétez après moi.",
+            mainText: "나라",
+            sub1: "",
+            sub2: "Pays",
+            referenceText: "나라",
+            attempts: 3,
+            cardAudio: AUDIO.COUNTRY
+        },
+        // Page 5: Repeat (어느 나라)
+        {
+            type: 'repeat',
+            instruction: "Répétez après moi.",
+            mainText: "<span class='text-blue-600'>어느</span> <span class='text-rose-500'>나라</span>",
+            sub1: "<span class='text-blue-600'>quel</span> <span class='text-rose-500'>pays</span>",
+            sub2: "Quel pays",
+            referenceText: "어느 나라",
+            attempts: 3,
+            cardAudio: AUDIO.WHICH_COUNTRY
+        },
+        // Page 6: Card Audio (사람)
+        {
+            type: 'card_audio',
+            mainText: "사람",
+            sub1: "",
+            sub2: "Personne",
+            text: "« 사람 » signifie « personne ». Il peut s'employer seul, ou se placer derrière un mot interrogatif ou un nom de pays pour indiquer l'origine.",
+            audio: AUDIO.EXP_3,
+            cardAudio: AUDIO.PERSON
+        },
+        // Page 7: Repeat (사람)
+        {
+            type: 'repeat',
+            instruction: "Répétez après moi.",
+            mainText: "사람",
+            sub1: "",
+            sub2: "Personne",
+            referenceText: "사람",
+            attempts: 3,
+            cardAudio: AUDIO.PERSON
+        },
+        // Page 8: Repeat (사람이에요?)
+        {
+            type: 'repeat',
+            instruction: "Répétez après moi.",
+            mainText: "<span class='text-blue-600'>사람</span><span class='text-rose-500'>이에요</span>?",
+            sub1: "<span class='text-rose-500'>être</span> <span class='text-blue-600'>personne</span>",
+            sub2: "Êtes-vous une personne ?",
+            referenceText: "사람이에요",
+            attempts: 3,
+            cardAudio: AUDIO.IS_PERSON
+        },
+        // Page 9: Repeat (어느 나라 사람이에요?)
+        {
+            type: 'repeat',
+            instruction: "Combinons les deux parties pour compléter la question.",
+            mainText: "<span class='text-blue-600'>어느</span> <span class='text-rose-500'>나라</span> <span class='text-green-600'>사람</span><span class='text-purple-600'>이에요</span>?",
+            sub1: "<span class='text-purple-600'>Êtes</span>-vous une <span class='text-green-600'>personne</span> de <span class='text-blue-600'>quel</span> <span class='text-rose-500'>pays</span> ?",
+            sub2: "Vous venez de quel pays ?",
+            referenceText: "어느 나라 사람이에요",
+            attempts: 3,
+            cardAudio: AUDIO.Q_NATIONALITY
+        },
+        // Page 10: Repeat (어느 나라 사람이에요? - Again)
+        {
+            type: 'repeat',
+            instruction: "Répétez encore une fois.",
+            mainText: "<span class='text-blue-600'>어느</span> <span class='text-rose-500'>나라</span> <span class='text-green-600'>사람</span><span class='text-purple-600'>이에요</span>?",
+            sub1: "<span class='text-purple-600'>Êtes</span>-vous une <span class='text-green-600'>personne</span> de <span class='text-blue-600'>quel</span> <span class='text-rose-500'>pays</span> ?",
+            sub2: "Vous venez de quel pays ?",
+            referenceText: "어느 나라 사람이에요",
+            attempts: 3,
+            cardAudio: AUDIO.Q_NATIONALITY
+        },
+        // Page 11: Repeat (프랑스)
+        {
+            type: 'repeat',
+            instruction: "Répétez après moi.",
+            mainText: "프랑스",
+            sub1: "",
+            sub2: "France",
+            referenceText: "프랑스",
+            attempts: 3,
+            cardAudio: AUDIO.FRANCE
+        },
+        // Page 12: Card Audio (프랑스 사람)
+        {
+            type: 'card_audio',
+            mainText: "<span class='text-blue-600'>프랑스</span> <span class='text-rose-500'>사람</span>",
+            sub1: "<span class='text-rose-500'>Personne</span> <span class='text-blue-600'>française</span>",
+            sub2: "Français(e)",
+            text: "Comme « 사람 » est un nom indépendant, vous devez laisser un espace lorsque vous l'utilisez avec un nom de pays ou de région.",
+            audio: AUDIO.EXP_4,
+            cardAudio: AUDIO.FRENCH_PERSON
+        },
+        // Page 13: Repeat (저는 프랑스 사람이에요.)
+        {
+            type: 'repeat',
+            instruction: "Parlez en phrases complètes.",
+            mainText: "<span class='text-blue-600'>저</span>는 <span class='text-rose-500'>프랑스</span> <span class='text-green-600'>사람</span><span class='text-purple-600'>이에요</span>.",
+            sub1: "<span class='text-blue-600'>Je</span> <span class='text-purple-600'>suis</span> une <span class='text-green-600'>personne</span> <span class='text-rose-500'>française</span>", 
+            sub2: "Je suis français(e).",
+            referenceText: "저는 프랑스 사람이에요",
+            attempts: 3,
+            cardAudio: AUDIO.AM_FRENCH
+        },
+        // Page 14: Repeat (저는 프랑스 사람이에요. - Again)
+        {
+            type: 'repeat',
+            instruction: "Répétez encore une fois.",
+            mainText: "<span class='text-blue-600'>저</span>는 <span class='text-rose-500'>프랑스</span> <span class='text-green-600'>사람</span><span class='text-purple-600'>이에요</span>.",
+            sub1: "<span class='text-blue-600'>Je</span> <span class='text-purple-600'>suis</span> une <span class='text-green-600'>personne</span> <span class='text-rose-500'>française</span>",
+            sub2: "Je suis français(e).",
+            referenceText: "저는 프랑스 사람이에요",
+            attempts: 3,
+            cardAudio: AUDIO.AM_FRENCH
+        },
+        // Page 15: Repeat (Recap)
+        {
+            type: 'repeat',
+            instruction: "Bravo ! Maintenant, demandez l’origine encore une fois.",
+            mainText: "어느 나라 사람이에요?",
+            sub1: "",
+            sub2: "Vous venez de quel pays?",
+            referenceText: "어느 나라 사람이에요",
+            attempts: 3,
+            cardAudio: AUDIO.Q_NATIONALITY
+        },
+        // Page 16: Speaking Quiz (Conversation Start)
+        {
+            type: 'conversation_start',
+            instruction: "À vous de le dire !",
+            displayPrompt: "Vous venez de quel pays?",
+            referenceText: "어느 나라 사람이에요",
+            audioPrompt: AUDIO.Q_NATIONALITY, 
+            replyText: "저는 한국 사람이에요.",
+            replyAudio: AUDIO.AM_KOREAN 
+        },
+        // Page 17: Speaking Quiz (Conversation Reply)
+        {
+            type: 'conversation_reply',
+            instruction: "Cette fois, répondez à la question.",
+            audioPrompt: AUDIO.Q_NATIONALITY, 
+            displayHint: "Je suis français(e).",
+            referenceText: "저는 프랑스 사람이에요",
+            hintAudio: AUDIO.AM_FRENCH
+        },
+        // Page 18: Outro
+        {
+            type: 'outro',
+            text: "C'est tout pour cette leçon ! Dans les leçons 9, 10 et 11, découvrez différents noms de pays et essayez de les écrire et de les dire en coréen. À bientôt !",
+            audio: AUDIO.EXP_5
+        }
+    ];
+
+    // --- Audio & State ---
+    let currentPage = 0;
+    let audioContextInitialized = false;
+    let correctSound, completionSynth, pageTurnSynth;
+    let currentAudioObj = null;
+    let autoPlayTimer = null;
+    const pageStates = {}; 
+
+    async function initAudio() {
+        if (audioContextInitialized) return;
+        try {
+            await Tone.start();
+            correctSound = new Tone.Synth().toDestination();
+            completionSynth = new Tone.PolySynth(Tone.Synth).toDestination();
+            pageTurnSynth = new Tone.MembraneSynth({
+                pitchDecay: 0.008, octaves: 1, oscillator: { type: 'sine' },
+                envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
+            }).toDestination();
+            audioContextInitialized = true;
+        } catch (e) {
+            console.warn("Audio init failed", e);
+        }
+    }
+
+    function playSound(type) {
+        if (!audioContextInitialized) return;
+        switch (type) {
+            case 'correct': correctSound.triggerAttackRelease('C5', '0.1s'); break;
+            case 'turn': pageTurnSynth.triggerAttackRelease("C2", "32n"); break;
+            case 'complete': completionSynth.triggerAttackRelease(["C5", "E5", "G5", "C6"], "4n"); break;
+        }
+    }
+
+    function stopCurrentAudio() {
+        if (autoPlayTimer) { clearTimeout(autoPlayTimer); autoPlayTimer = null; }
+        if (currentAudioObj) {
+            currentAudioObj.pause();
+            currentAudioObj.currentTime = 0;
+            currentAudioObj.onended = null;
+            currentAudioObj = null;
+        }
+    }
+
+    function playAudio(src, onEndCallback) {
+        stopCurrentAudio();
+        stopRecording(null, true);
+        if (!src) return;
+        currentAudioObj = new Audio(src);
+        currentAudioObj.play().catch(e => { if(!e.message.includes('interrupted')) console.error("Play error:", e); });
+        if (onEndCallback) {
+            currentAudioObj.onended = onEndCallback;
+        }
+    }
+
+    // --- UI Logic ---
+    const container = document.getElementById('content-area');
+    const header = document.getElementById('header');
+    const footer = document.getElementById('footer');
+    const pageIndicator = document.getElementById('page-indicator');
+    const btnNext = document.getElementById('btn-next');
+    const btnPrev = document.getElementById('btn-prev');
+
+    function renderPage() {
+        stopCurrentAudio();
+        stopRecording(null, true); 
+
+        container.innerHTML = '';
+        const page = pages[currentPage];
+        
+        if (!pageStates[currentPage]) pageStates[currentPage] = { attemptsUsed: 0, passed: false };
+
+        pageIndicator.innerText = `${currentPage + 1} / ${pages.length}`;
+        
+        if (page.type === 'cover') {
+            header.classList.add('hidden');
+            footer.classList.add('hidden');
+        } else {
+            header.classList.remove('hidden');
+            footer.classList.remove('hidden');
+        }
+
+        btnPrev.disabled = currentPage <= 1;
+        btnPrev.classList.toggle('opacity-0', currentPage <= 1);
+        
+        resetNextButton();
+        
+        switch(page.type) {
+            case 'cover': renderCover(page); break;
+            case 'text': renderTextPage(page); break;
+            case 'card_audio': renderCardAudio(page); break;
+            case 'double_card': renderDoubleCard(page); break;
+            case 'repeat': renderRepeat(page); break;
+            case 'conversation_start': renderConversationStart(page); break;
+            case 'conversation_reply': renderConversationReply(page); break;
+            case 'outro': renderOutro(page); break;
+        }
+
+        checkPageState(page);
+    }
+
+    function resetNextButton() {
+        btnNext.disabled = false;
+        btnNext.classList.remove('bg-gray-400', 'cursor-not-allowed');
+        btnNext.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+        btnNext.innerHTML = `<i class="ph ph-arrow-right icon-fluid-md"></i>`;
+    }
+
+    function disableNextButton() {
+        btnNext.disabled = true;
+        btnNext.classList.add('bg-gray-400', 'cursor-not-allowed');
+        btnNext.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+    }
+
+    function checkPageState(page) {
+        if (['cover', 'text', 'card_audio', 'double_card', 'outro'].includes(page.type)) return;
+        
+        const state = pageStates[currentPage];
+        if (state.passed) {
+             const feedback = document.getElementById('feedback-msg');
+             const recBtn = document.getElementById('rec-btn');
+             if(feedback && !feedback.innerHTML.includes("Excellent")) {
+                 feedback.insertAdjacentHTML('afterbegin', `<span class="text-green-500 font-bold block mb-1">Excellent !</span>`);
+             }
+             if(recBtn) {
+                 recBtn.disabled = true;
+                 recBtn.innerHTML = `<i class="ph ph-check icon-fluid-md text-green-500"></i>`;
+             }
+             if (page.type === 'conversation_start') {
+                 const replyContainer = document.getElementById('reply-container');
+                 if(replyContainer) replyContainer.classList.remove('hidden');
+             }
+        } else {
+            disableNextButton();
+            if (state.attemptsUsed >= 3) {
+                resetNextButton();
+            }
+        }
+    }
+
+    // --- Renderers ---
+
+    function renderCover(page) {
+        container.innerHTML = `
+            <div class="page-wrapper fade-in text-center">
+                <div class="flex flex-col items-center justify-center space-y-[4vh]">
+                    <div class="w-[15vh] h-[15vh] bg-indigo-100 rounded-full flex items-center justify-center shadow-inner">
+                        <i class="ph ph-chat-circle-text text-[8vh] text-indigo-600"></i>
+                    </div>
+                    <h1 class="text-fluid-xl font-bold text-gray-800 leading-tight">${page.title}</h1>
+                    <p class="text-fluid-lg text-gray-600 font-medium">${page.subtitle}</p>
+                    <button onclick="nextPage()" class="mt-[5vh] px-[4vw] py-[2vh] bg-indigo-600 text-white rounded-full font-bold text-fluid-base shadow-lg hover:bg-indigo-700 transition transform hover:scale-105">
+                        ${page.buttonText}
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderTextPage(page) {
+        if (page.audio) { autoPlayTimer = setTimeout(() => { playAudio(page.audio); }, 1000); }
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
+                    <div class="card-box">
+                        <p class="text-fluid-base text-gray-700 leading-relaxed text-center">
+                            ${page.text}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderCardAudio(page) {
+        if (page.audio) { autoPlayTimer = setTimeout(() => { playAudio(page.audio); }, 1000); }
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                 <div class="flex flex-col items-center max-w-4xl w-full gap-[2vh]">
+                    <div class="card-box py-[4vh] space-y-[2vh]">
+                        <h2 class="text-fluid-xl font-bold text-indigo-900 korean-text">${page.mainText}</h2>
+                        <div class="flex flex-col items-center">
+                            <span class="subtitle-1 text-fluid-sm">${page.sub1}</span>
+                            <span class="subtitle-2 text-fluid-base">${page.sub2}</span>
+                        </div>
+                        <button onclick="playAudio('${page.cardAudio}')" class="mt-[1vh] w-[8vh] h-[8vh] bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition shrink-0 shadow-sm">
+                            <i class="ph ph-speaker-high icon-fluid-md"></i>
+                        </button>
+                    </div>
+                    ${page.text ? `
+                        <div class="bg-indigo-50/50 p-[3vh] rounded-2xl border border-indigo-100 text-center w-full max-w-[800px]">
+                            <p class="text-gray-700 text-fluid-base leading-relaxed">${page.text}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderDoubleCard(page) {
+        if (page.audio) { autoPlayTimer = setTimeout(() => { playAudio(page.audio); }, 1000); }
+        
+        const cardsHtml = page.items.map(item => `
+            <div class="flex-1 bg-white p-[3vmin] rounded-2xl border border-gray-200 flex flex-col items-center justify-center gap-[1vmin] shadow-sm min-h-[20vh]">
+                <h2 class="text-fluid-lg font-bold text-indigo-900 korean-text">${item.text}</h2>
+                <div class="flex flex-col items-center">
+                    <span class="subtitle-1 text-fluid-sm">${item.sub1}</span>
+                    <span class="subtitle-2 text-fluid-base">${item.sub2}</span>
+                </div>
+                <button onclick="playAudio('${item.audio}')" class="mt-2 w-[6vh] h-[6vh] bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition shadow-sm">
+                    <i class="ph ph-speaker-high text-xl"></i>
+                </button>
+            </div>
+        `).join('');
+
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                 <div class="flex flex-col items-center max-w-4xl w-full gap-[2vh]">
+                    <div class="flex flex-row gap-[2vh] w-full max-w-2xl">
+                        ${cardsHtml}
+                    </div>
+                    ${page.text ? `
+                        <div class="bg-indigo-50/50 p-[3vh] rounded-2xl border border-indigo-100 text-center w-full max-w-[800px]">
+                            <p class="text-gray-700 text-fluid-base leading-relaxed">${page.text}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderRepeat(page) {
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
+                    <p class="text-gray-500 font-bold uppercase tracking-widest text-fluid-sm">${page.instruction}</p>
+                    <div class="card-box py-[5vh] space-y-[2vh]">
+                        <div class="flex items-center justify-center gap-4">
+                            <h2 class="text-fluid-xl font-bold text-indigo-900 korean-text">${page.mainText}</h2>
+                            <button onclick="playAudio('${page.cardAudio}')" class="w-[6vh] h-[6vh] bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition shadow-sm">
+                                <i class="ph ph-speaker-high text-xl"></i>
+                            </button>
+                        </div>
+                        ${page.sub1 ? `<span class="subtitle-1 text-fluid-sm">${page.sub1}</span>` : ''}
+                        <span class="subtitle-2 text-fluid-base">${page.sub2}</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-[2vh]">
+                        <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
+                            <i class="ph ph-microphone icon-fluid-lg"></i>
+                        </button>
+                        <div id="feedback-msg" class="h-[3vh] text-fluid-sm font-medium text-gray-500">Appuyez pour parler</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        setupRecording('rec-btn', 'feedback-msg', page.referenceText, page.attempts);
+    }
+
+    function renderConversationStart(page) {
+        const state = pageStates[currentPage];
+        const isPassed = state && state.passed;
+
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
+                    <p class="text-gray-500 font-bold uppercase tracking-widest text-fluid-sm">${page.instruction}</p>
+                    
+                    <div class="card-box py-[5vh] space-y-[2vh]">
+                        <p class="text-fluid-xl font-bold text-gray-800 korean-text">${page.displayPrompt}</p>
+                    </div>
+
+                    <div class="flex flex-col items-center gap-[2vh]">
+                        <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
+                            <i class="ph ph-microphone icon-fluid-lg"></i>
+                        </button>
+                        <div id="feedback-msg" class="min-h-[3vh] text-fluid-sm font-medium text-gray-500 flex flex-col items-center justify-center w-full">
+                            Appuyez pour parler
+                        </div>
+                    </div>
+
+                    <!-- Moved Reply Container Here: Bottom of all elements -->
+                    <div id="reply-container" class="${isPassed ? 'block' : 'hidden'} w-full animate-fade-in transition-all flex justify-center">
+                        <div class="card-box py-[3vh] space-y-[2vh] bg-green-50 border-green-100 shadow-md">
+                            <div class="flex flex-col items-center gap-2">
+                                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-1">
+                                    <i class="ph ph-user-circle text-2xl"></i>
+                                </div>
+                                <button onclick="playAudio('${page.replyAudio}')" class="flex items-center gap-2 px-4 py-2 bg-white rounded-2xl hover:bg-gray-100 transition text-gray-800 font-bold text-lg korean-text shadow-sm border border-green-200">
+                                    <i class="ph ph-speaker-high text-indigo-500"></i>
+                                    ${page.replyText}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        setupRecording('rec-btn', 'feedback-msg', page.referenceText, 3);
+    }
+
+    function renderConversationReply(page) {
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
+                    <button onclick="playAudio('${page.audioPrompt}')" class="flex items-center gap-2 px-[3vh] py-[1.5vh] bg-indigo-50 text-indigo-700 rounded-xl text-fluid-sm font-bold hover:bg-indigo-100 transition">
+                        <i class="ph ph-speaker-high text-lg"></i> Écouter la question
+                    </button>
+
+                    <p class="text-gray-500 font-bold uppercase tracking-widest text-fluid-sm">${page.instruction}</p>
+                    
+                    <div class="w-full max-w-[800px] bg-indigo-50 p-[5vh] rounded-[2rem] border-2 border-indigo-200 border-dashed flex flex-col items-center space-y-[1.5vh]">
+                        <span class="text-fluid-lg font-bold text-gray-800 text-center">${page.displayHint}</span>
+                    </div>
+                    
+                    <div class="flex flex-col items-center gap-[2vh]">
+                        <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
+                            <i class="ph ph-microphone icon-fluid-lg"></i>
+                        </button>
+                        <div id="feedback-msg" class="min-h-[3vh] text-fluid-sm font-medium text-gray-500 flex flex-col items-center justify-center w-full">
+                            Appuyez pour répondre
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        setupRecording('rec-btn', 'feedback-msg', null, 3);
+    }
+
+    function renderOutro(page) {
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                <div class="flex flex-col items-center justify-center space-y-[4vh]">
+                    <div class="w-[15vh] h-[15vh] bg-green-100 rounded-full flex items-center justify-center mb-4 text-green-600 animate-bounce shadow-lg">
+                        <i class="ph ph-check-fat icon-fluid-lg"></i>
+                    </div>
+                    <h1 class="text-fluid-xl font-bold text-gray-800">Terminé !</h1>
+                    <div class="card-box">
+                        <p class="text-fluid-base text-gray-600 text-center leading-relaxed">
+                            ${page.text}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `;
+        if (page.audio) { autoPlayTimer = setTimeout(() => { playAudio(page.audio); }, 1500); }
+        initAudio().then(() => {
+             playSound('complete');
+             window.parent.postMessage({ type: 'lesson_complete' }, '*');
+        });
+        footer.classList.add('hidden');
+    }
+
+    // --- Navigation & Helper ---
+    function nextPage() {
+        initAudio();
+        playSound('turn');
+        if (currentPage < pages.length - 1) { currentPage++; renderPage(); }
+    }
+    function prevPage() {
+        playSound('turn');
+        if (currentPage > 0) { currentPage--; renderPage(); }
+    }
+
+    btnNext.addEventListener('click', nextPage);
+    btnPrev.addEventListener('click', prevPage);
+
+    // --- Recording Logic ---
+    let mediaRecorder, isRecording = false, recordingTimeout;
+    let recordingState = 'idle'; 
+
+    async function setupRecording(btnId, feedbackId, referenceText, attemptsMax) {
+        const btn = document.getElementById(btnId);
+        const feedback = document.getElementById(feedbackId);
+        const page = pages[currentPage];
+        const state = pageStates[currentPage];
+
+        if (state.passed) { btn.disabled = true; return; }
+
+        btn.onclick = async () => {
+            if (attemptsMax && state.attemptsUsed >= attemptsMax && !state.passed) {
+                feedback.innerText = "Nombre de tentatives épuisé.";
+                resetNextButton();
+                // Special logic for Quiz 14 (Conv Start) to show reply even if failed
+                if (page.type === 'conversation_start') {
+                    // Show reply card below transcription (which is handled in processAudio failure block)
+                    await processAudio(null, referenceText, feedback, btn, true); 
+                }
+                return;
+            }
+
+            if (recordingState === 'starting') return; 
+
+            if (recordingState === 'recording') {
+                stopRecording(btn);
+                return;
+            }
+
+            recordingState = 'starting';
+            btn.innerHTML = `<i class="ph ph-spinner animate-spin text-2xl"></i>`;
+            
+            try {
+                await initAudio(); 
+                stopCurrentAudio(); 
+                
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                const audioChunks = [];
+                mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+                
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const reader = new FileReader();
+                    reader.readAsDataURL(audioBlob);
+                    reader.onloadend = async () => {
+                        const base64Audio = reader.result.split(',')[1];
+                        state.attemptsUsed++;
+                        await processAudio(base64Audio, referenceText, feedback, btn);
+                    };
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                
+                mediaRecorder.start();
+                recordingState = 'recording';
+                
+                btn.classList.add('recording-pulse', 'bg-red-500', 'text-white', 'border-red-500');
+                btn.classList.remove('bg-white', 'text-indigo-600', 'border-gray-100');
+                btn.innerHTML = `<i class="ph ph-stop icon-fluid-md"></i>`;
+                feedback.innerText = "Écoute en cours...";
+                
+                if (recordingTimeout) clearTimeout(recordingTimeout);
+                recordingTimeout = setTimeout(() => { 
+                    if (recordingState === 'recording') stopRecording(btn); 
+                }, 10000);
+
+            } catch (err) {
+                console.error("Mic Error:", err);
+                feedback.innerText = "Erreur micro.";
+                recordingState = 'idle';
+                btn.innerHTML = `<i class="ph ph-microphone icon-fluid-lg"></i>`;
+            }
+        };
+    }
+
+    function stopRecording(btn, force = false) {
+        if (recordingTimeout) clearTimeout(recordingTimeout);
+        
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+        }
+        recordingState = 'idle';
+        
+        if (btn && !force) {
+            btn.classList.remove('recording-pulse', 'bg-red-500', 'text-white', 'border-red-500');
+            btn.classList.add('bg-white', 'text-indigo-600', 'border-gray-100');
+            btn.innerHTML = `<i class="ph ph-microphone icon-fluid-lg"></i>`;
+        }
+    }
+
+    // --- Grammar Check for Quiz 16 ---
+    function checkKoreanGrammar(text) {
+        if (!text) return false;
+        
+        const endsWithYeyo = text.endsWith('예요');
+        const endsWithIyeyo = text.endsWith('이에요');
+        
+        if (!endsWithYeyo && !endsWithIyeyo) return false;
+
+        const jamos = Hangul.disassemble(text);
+        if (jamos.length < 3) return false;
+
+        let noun = "";
+        if (endsWithYeyo) noun = text.slice(0, -2); 
+        else noun = text.slice(0, -3); 
+        
+        if (!noun) return false;
+        if (!text.startsWith("저는")) return false; 
+        
+        const lastChar = noun[noun.length - 1];
+        const hasPatchim = Hangul.endsWithConsonant(lastChar);
+        
+        if (endsWithYeyo) {
+            if (!hasPatchim) return true;
+        } else if (endsWithIyeyo) {
+             if (hasPatchim) return true;
+        }
+        
+        return false;
+    }
+
+    async function processAudio(audioBase64, referenceText, feedbackEl, btnEl, forceFail = false) {
+        if (!forceFail) feedbackEl.innerText = "Analyse...";
+        
+        let result = { text: "" };
+        let score = 0;
+        let passed = false;
+
+        try {
+            if (!forceFail && audioBase64) {
+                const payload = { audioBase64: audioBase64, languageCode: "Kor" };
+                if (referenceText) payload.referenceText = referenceText;
+
+                const res = await fetch(CLOVA_API_FUNCTION_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                     const errText = await res.text();
+                     console.error("API Error details:", res.status, errText);
+                     throw new Error("API Error: " + res.status);
+                }
+                result = await res.json();
+                score = result.assessment?.pronunciation_score;
+            }
+
+            const recognizedText = result.text || "";
+            const page = pages[currentPage];
+            const displayScore = score !== undefined ? score : '-';
+
+            // --- Validation Logic ---
+            if (!forceFail) {
+                if (page.type === 'conversation_reply') {
+                    // Quiz 15: Special Grammar Check
+                    passed = checkKoreanGrammar(recognizedText);
+                } else if (referenceText) { 
+                    // Standard Reference Check
+                    const normalize = (str) => str ? str.replace(/[\s\.\,\?\!]/g, "") : "";
+                    const scorePass = score >= 80;
+                    const textPass = recognizedText && normalize(recognizedText) === normalize(referenceText);
+                    if (scorePass && textPass) passed = true; 
+                } else { 
+                    // Fallback for other open ended if any
+                    if (recognizedText || score >= 0) passed = true; 
+                }
+            }
+
+            const state = pageStates[currentPage];
+            let msg = "";
+
+            if (passed) {
+                state.passed = true;
+                playSound('correct'); 
+                const scoreText = page.type === 'conversation_reply' ? '' : ` (${displayScore})`;
+                msg = `<span class="text-green-500 font-bold block mb-1">Excellent !${scoreText}</span>`;
+                if(btnEl) {
+                    btnEl.disabled = true;
+                    btnEl.innerHTML = `<i class="ph ph-check icon-fluid-md text-green-500"></i>`;
+                }
+                resetNextButton();
+
+                // Quiz 14 Success: Auto Play Reply
+                if (page.type === 'conversation_start') {
+                     if(page.replyAudio) setTimeout(() => { playAudio(page.replyAudio); }, 500);
+                }
+
+            } else {
+                if (state.attemptsUsed >= (page.attempts || 3) || forceFail) {
+                     msg = `<span class="text-orange-500 block mb-1">Nombre de tentatives épuisé.</span>`;
+                     resetNextButton();
+                } else {
+                     msg = `<span class="text-orange-500 block mb-1">Réessayez. (${displayScore})</span>`;
+                }
+            }
+            
+            if (recognizedText) {
+                msg += `<div class="text-indigo-600 font-medium mt-1 text-sm">"${recognizedText}"</div>`;
+            }
+
+            // Hint Logic (Not for Repeat pages, and not for Conversation Reply per new instruction)
+            const isExcludedFromHint = page.type === 'repeat' || page.type === 'conversation_reply';
+            
+            if ((!passed || forceFail) && page.audioPrompt && !isExcludedFromHint) {
+                 window.playHint = () => playAudio(page.audioPrompt);
+                 msg += `<button onclick="playHint()" class="mt-2 flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs hover:bg-yellow-200 mx-auto transition"><i class="ph ph-speaker-high"></i> Réécouter</button>`;
+            }
+
+            // Quiz 14 (Conv Start) Special: Show Reply Card BELOW transcription/hint
+            if (page.type === 'conversation_start' && (passed || state.attemptsUsed >= 3)) {
+                 const replyContainer = document.getElementById('reply-container');
+                 if(replyContainer) replyContainer.classList.remove('hidden');
+            }
+
+            feedbackEl.innerHTML = msg;
+
+        } catch (e) {
+            console.error("API Call Failed:", e);
+            feedbackEl.innerHTML = `<span class="text-red-500 font-bold">Erreur de connexion. Veuillez réessayer.</span>`;
+            if(btnEl) {
+                btnEl.disabled = false;
+                btnEl.innerHTML = `<i class="ph ph-microphone icon-fluid-lg"></i>`;
+                btnEl.classList.remove('recording-pulse', 'bg-red-500', 'text-white', 'border-red-500');
+                btnEl.classList.add('bg-white', 'text-indigo-600', 'border-gray-100');
+            }
+        }
+    }
+
+    renderPage();
+</script>
+</body>
+</html>
