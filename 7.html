@@ -157,16 +157,17 @@
     
     // Audio Resources
     const AUDIO = {
+        // Reused from previous lessons
         Q_JOB: "https://res.cloudinary.com/de76i94ia/video/upload/v1767087382/sentence_1_vbijvz.mp3", // 직업이 뭐예요?
         STUDENT: "https://res.cloudinary.com/de76i94ia/video/upload/v1767088635/%E1%84%92%E1%85%A1%E1%86%A8%E1%84%89%E1%85%A2%E1%86%BC_weyhie.mp3", // 학생
         AM_STUDENT: "https://res.cloudinary.com/de76i94ia/video/upload/v1767087383/sentence_3_ec5vgm.mp3", // 저는 학생이에요
         AM_DOCTOR: "https://res.cloudinary.com/de76i94ia/video/upload/v1767087383/sentence_2_yhhdyr.mp3", // 저는 의사예요
 
+        // New for Lesson 7
         OFFICE_WORKER: "https://res.cloudinary.com/de76i94ia/video/upload/v1767260110/%E1%84%92%E1%85%AC%E1%84%89%E1%85%A1%E1%84%8B%E1%85%AF%E1%86%AB_btaoyu.mp3",
         WRITER: "https://res.cloudinary.com/de76i94ia/video/upload/v1767260109/%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%80%E1%85%A1_j6x8m9.mp3",
         AM_OFFICE_WORKER: "https://res.cloudinary.com/de76i94ia/video/upload/v1767260113/Sentence_4_rvqg8c.mp3", // 저는 회사원이에요
         AM_WRITER: "https://res.cloudinary.com/de76i94ia/video/upload/v1767260112/Sentence_5_qeju1c.mp3", // 저는 작가예요
-        OUTRO_MUSIC: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933273/audio_8_brpnpi.mp3"
     };
 
     const pages = [
@@ -176,7 +177,7 @@
             subtitle: "Leçon 7 - Plus de métier",
             buttonText: "Commencer"
         },
-        // Page 1: Repeat (회사원)
+        // Page 1: Repeat (회사원) - Removed Period
         {
             type: 'repeat',
             instruction: "Répétez après moi.",
@@ -186,7 +187,7 @@
             attempts: 3,
             cardAudio: AUDIO.OFFICE_WORKER
         },
-        // Page 2: Repeat (회사원 - Again)
+        // Page 2: Repeat (회사원 - Again) - Removed Period
         {
             type: 'repeat',
             instruction: "Répétez encore une fois.",
@@ -196,7 +197,7 @@
             attempts: 3,
             cardAudio: AUDIO.OFFICE_WORKER
         },
-        // Page 3: Repeat (작가)
+        // Page 3: Repeat (작가) - Removed Period
         {
             type: 'repeat',
             instruction: "Répétez après moi.",
@@ -206,7 +207,7 @@
             attempts: 3,
             cardAudio: AUDIO.WRITER
         },
-        // Page 4: Repeat (작가 - Again)
+        // Page 4: Repeat (작가 - Again) - Removed Period
         {
             type: 'repeat',
             instruction: "Répétez encore une fois.",
@@ -273,7 +274,7 @@
             type: 'speaking_gap',
             instruction: "Dites-le vous-même.",
             displayOriginal: "Je suis médecin.",
-            displayKorean: "저는 __예요.",
+            displayKorean: "저는 __예요.", // 2 chars * 2 = 4 underscores
             referenceText: "저는 의사예요",
             audioPrompt: AUDIO.AM_DOCTOR
         },
@@ -282,7 +283,7 @@
             type: 'speaking_gap',
             instruction: "Dites-le vous-même.",
             displayOriginal: "Je suis écrivain.",
-            displayKorean: "저는 ____.",
+            displayKorean: "저는 ____.", // 4 chars * 2 = 8 underscores
             referenceText: "저는 작가예요",
             audioPrompt: AUDIO.AM_WRITER
         },
@@ -291,7 +292,7 @@
             type: 'speaking_gap',
             instruction: "Dites-le vous-même.",
             displayOriginal: "Je suis étudiant.",
-            displayKorean: "__ __이에요.",
+            displayKorean: "__ __이에요.", // 5 chars * 2 = 10 underscores
             referenceText: "저는 학생이에요",
             audioPrompt: AUDIO.AM_STUDENT
         },
@@ -300,7 +301,7 @@
             type: 'speaking_gap',
             instruction: "Dites-le vous-même.",
             displayOriginal: "Je suis employée.",
-            displayKorean: "__ ______.",
+            displayKorean: "__ ______.", // 8 chars * 2 = 16 underscores
             referenceText: "저는 회사원이에요",
             audioPrompt: AUDIO.AM_OFFICE_WORKER
         },
@@ -318,14 +319,15 @@
         {
             type: 'conversation_reply',
             instruction: "Répondez à la question.",
+            audioPrompt: AUDIO.Q_JOB, 
             displayHint: "Je suis [métier].",
             referenceText: null // Grammar check
         },
-        // Page 17: Outro
+        // Page 17: Outro - Audio Removed
         {
             type: 'outro',
             text: "C'est tout pour aujourd'hui ! Apprenez à demander et dire votre nationalité dans le Chapitre 3 !",
-            audio: AUDIO.OUTRO_MUSIC
+            audio: null 
         }
     ];
 
@@ -656,7 +658,7 @@
                             <i class="ph ph-microphone icon-fluid-lg"></i>
                         </button>
                         <div id="feedback-msg" class="min-h-[3vh] text-fluid-sm font-medium text-gray-500 flex flex-col items-center justify-center w-full">
-                            Dites votre métier
+                            Dites votre nom complet
                         </div>
                     </div>
                 </div>
@@ -878,10 +880,10 @@
                 msg += `<div class="text-indigo-600 font-medium mt-1 text-sm">"${recognizedText}"</div>`;
             }
 
-            // Hint Logic (Not for Repeat pages)
-            const isShadowingOrRepeat = page.type === 'repeat'; 
+            // Hint Logic (Not for Repeat pages, and not for Conversation Reply per new instruction)
+            const isExcludedFromHint = page.type === 'repeat' || page.type === 'conversation_reply';
             
-            if ((!passed || forceFail) && page.audioPrompt && !isShadowingOrRepeat) {
+            if ((!passed || forceFail) && page.audioPrompt && !isExcludedFromHint) {
                  window.playHint = () => playAudio(page.audioPrompt);
                  msg += `<button onclick="playHint()" class="mt-2 flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs hover:bg-yellow-200 mx-auto transition"><i class="ph ph-speaker-high"></i> Réécouter</button>`;
             }
