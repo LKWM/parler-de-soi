@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Parler de soi - Leçon 12</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Tone.js for Sound Effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Hangul.js for Grammar Check -->
+    <script src="https://unpkg.com/hangul-js" type="text/javascript"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+        :root {
+            --unit: 1vmin; 
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .korean-text {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        #app-container {
+            background-color: white;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Desktop: 16:9 Ratio */
+        @media (min-width: 1024px) {
+            #app-container {
+                aspect-ratio: 16/9;
+                width: auto;
+                height: 100vh;
+                max-width: 177.78vh;
+                box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            }
+            html { font-size: 2.5vh; } 
+        }
+
+        /* Mobile */
+        @media (max-width: 1023px) {
+            #app-container {
+                width: 100%;
+                height: 100%;
+            }
+            html { font-size: 16px; }
+        }
+
+        .page-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(2vh, 4vmin, 4vh) clamp(2vw, 4vmin, 4vw);
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .card-box {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            padding: clamp(1.5rem, 4vmin, 3rem);
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            flex-shrink: 1;
+            max-height: 100%;
+            overflow-y: auto;
+        }
+
+        .text-fluid-xl { font-size: clamp(1.5rem, 5vmin, 4rem); }
+        .text-fluid-lg { font-size: clamp(1.2rem, 3.5vmin, 2.5rem); }
+        .text-fluid-base { font-size: clamp(1rem, 2.5vmin, 1.5rem); }
+        .text-fluid-sm { font-size: clamp(0.875rem, 2vmin, 1.25rem); }
+        .icon-fluid-md { font-size: clamp(1.5rem, 4vmin, 3rem); }
+        .icon-fluid-lg { font-size: clamp(2rem, 6vmin, 5rem); }
+        
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+        .recording-pulse { animation: pulse-red 1.5s infinite; }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .nav-btn {
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        @media (min-width: 1024px) {
+            .nav-btn { width: 5rem; height: 5rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <div id="header" class="absolute top-0 right-0 p-4 md:p-6 z-20 hidden">
+        <span id="page-indicator" class="font-mono text-gray-400 font-bold text-fluid-sm bg-gray-100 px-3 py-1 rounded-full">1 / 14</span>
+    </div>
+
+    <div id="content-area" class="flex-grow flex flex-col items-center justify-center w-full h-full relative text-center"></div>
+
+    <div id="footer" class="absolute bottom-0 w-full p-6 md:p-8 flex justify-between items-end z-20 pointer-events-none hidden">
+        <button id="btn-prev" class="nav-btn bg-gray-100 text-gray-500 hover:bg-gray-200 pointer-events-auto">
+            <i class="ph ph-arrow-left icon-fluid-md"></i>
+        </button>
+        <button id="btn-next" class="nav-btn bg-indigo-600 text-white hover:bg-indigo-700 pointer-events-auto">
+            <i class="ph ph-arrow-right icon-fluid-md"></i>
+        </button>
+    </div>
+</div>
+
+<script>
+    // --- Configuration ---
+    const BASE_44_ORIGIN = "https://coreeno.base44.app"; 
+    const CLOVA_API_FUNCTION_URL = BASE_44_ORIGIN + '/api/functions/naverClovaSpeech';
+    const PLACEHOLDER_AUDIO = "";
+
+    // Audio Resources
+    const AUDIO = {
+        // Leçon 12 Assets
+        NOT_BE: "https://res.cloudinary.com/de76i94ia/video/upload/v1767345984/%E1%84%8B%E1%85%A1%E1%84%82%E1%85%B5%E1%84%8B%E1%85%A6%E1%84%8B%E1%85%AD_lpyd2a.mp3",
+        IS_JENNIE: "https://res.cloudinary.com/de76i94ia/video/upload/v1767345985/%E1%84%8C%E1%85%A6%E1%84%82%E1%85%B5%E1%84%8B%E1%85%A8%E1%84%8B%E1%85%AD_qhhiho.mp3",
+        IS_STUDENT: "https://res.cloudinary.com/de76i94ia/video/upload/v1767345988/%E1%84%92%E1%85%A1%E1%86%A8%E1%84%89%E1%85%A2%E1%86%BC%E1%84%8B%E1%85%B5%E1%84%8B%E1%85%A6%E1%84%8B%E1%85%AD_pvfsia.mp3",
+        
+        NOT_JENNIE: "https://res.cloudinary.com/de76i94ia/video/upload/v1767345976/sentence_1_ckmoa0.mp3", // 저는 제니가 아니에요
+        NOT_YOHAN: "https://res.cloudinary.com/de76i94ia/video/upload/v1767345978/sentence_2_dt0acd.mp3", // 저는 요한이 아니에요
+        NOT_DOCTOR: "https://res.cloudinary.com/de76i94ia/video/upload/v1767345980/sentence_3_vnwspj.mp3", // 저는 의사가 아니에요
+        NOT_KOREAN: "https://res.cloudinary.com/de76i94ia/video/upload/v1767345982/sentence_4_e6onju.mp3", // 저는 한국 사람이 아니에요
+        
+        AM_STUDENT: "https://res.cloudinary.com/de76i94ia/video/upload/v1767087383/sentence_3_ec5vgm.mp3", // 저는 학생이에요 (From Leçon 4)
+        AM_NOT_STUDENT: "https://res.cloudinary.com/de76i94ia/video/upload/v1767347473/sentence_5_l47qvq.mp3", // 저는 학생이 아니에요 (ADDED)
+
+        EXP_1: "https://res.cloudinary.com/de76i94ia/video/upload/v1767345967/audio_1_dsncyi.mp3",
+        EXP_2: "https://res.cloudinary.com/de76i94ia/video/upload/v1767345968/audio_2_xkdzsu.mp3",
+        EXP_3: "https://res.cloudinary.com/de76i94ia/video/upload/v1767345970/audio_3_xxep4h.mp3",
+        EXP_4: "https://res.cloudinary.com/de76i94ia/video/upload/v1767345971/audio_4_q98q9f.mp3",
+        EXP_5: "https://res.cloudinary.com/de76i94ia/video/upload/v1767345973/audio_5_wi2h84.mp3",
+        EXP_6: "https://res.cloudinary.com/de76i94ia/video/upload/v1767345975/audio_6_zfd3ca.mp3"
+    };
+
+    const pages = [
+        {
+            type: 'cover',
+            title: "Chapitre 4: Répondre en phrases négatives",
+            subtitle: "Leçon 12 : Comment répondre en phrases négatives",
+            buttonText: "Commencer"
+        },
+        // Page 1: Text
+        {
+            type: 'text',
+            text: "Bonjour ! Bienvenue dans le Chapitre 4. Dans ce chapitre, nous allons apprendre à former des phrases négatives.",
+            audio: AUDIO.EXP_1
+        },
+        // Page 2: Card Audio (아니에요)
+        {
+            type: 'card_audio',
+            mainText: "아니에요",
+            sub1: "Ne pas être",
+            sub2: "Je ne suis pas",
+            text: "« 아니에요 » est la forme conjuguée de l'adjectif « 아니다 » au langage poli. C'est le contraire de « 이다 » .",
+            audio: AUDIO.EXP_2,
+            cardAudio: AUDIO.NOT_BE
+        },
+        // Page 3: Repeat (아니에요)
+        {
+            type: 'repeat',
+            instruction: "Répétez après moi.",
+            mainText: "아니에요",
+            sub1: "Ne pas être",
+            sub2: "Je ne suis pas",
+            referenceText: "아니에요",
+            attempts: 3,
+            cardAudio: AUDIO.NOT_BE
+        },
+        // Page 4: Repeat (아니에요)
+        {
+            type: 'repeat',
+            instruction: "Répétez après moi.",
+            mainText: "아니에요",
+            sub1: "Ne pas être",
+            sub2: "Je ne suis pas",
+            referenceText: "아니에요",
+            attempts: 3,
+            cardAudio: AUDIO.NOT_BE
+        },
+        // Page 5: Card Audio (저는 제니가 아니에요)
+        {
+            type: 'card_audio',
+            mainText: "<span class='text-blue-600'>저</span>는 <span class='text-rose-500'>제니</span><span class='text-green-600'>가 아니에요</span>.",
+            sub1: "<span class='text-blue-600'>Je</span> <span class='text-green-600'>ne suis pas</span> <span class='text-rose-500'>Jennie</span>.",
+            sub2: "Je ne suis pas Jennie.",
+            text: "Lorsque vous utilisez « 아니에요 » pour faire une phrase négative, vous devez ajouter une particule après le complément de sujet que vous niez. Si le mot se termine par une voyelle, on ajoute la particule « 가 » .",
+            audio: AUDIO.EXP_3,
+            cardAudio: AUDIO.NOT_JENNIE
+        },
+        // Page 6: Repeat (저는 제니가 아니에요)
+        {
+            type: 'repeat',
+            instruction: "Répétez encore une fois.",
+            mainText: "<span class='text-blue-600'>저</span>는 <span class='text-rose-500'>제니</span><span class='text-green-600'>가 아니에요</span>.",
+            sub1: "<span class='text-blue-600'>Je</span> <span class='text-green-600'>ne suis pas</span> <span class='text-rose-500'>Jennie</span>.",
+            sub2: "Je ne suis pas Jennie.",
+            referenceText: "저는 제니가 아니에요",
+            attempts: 3,
+            cardAudio: AUDIO.NOT_JENNIE
+        },
+        // Page 7: Card Audio (저는 요한이 아니에요)
+        {
+            type: 'card_audio',
+            mainText: "<span class='text-blue-600'>저</span>는 <span class='text-rose-500'>요한</span><span class='text-green-600'>이 아니에요</span>.",
+            sub1: "<span class='text-blue-600'>Je</span> <span class='text-green-600'>ne suis pas</span> <span class='text-rose-500'>Yohan</span>.",
+            sub2: "Je ne suis pas Yohan.",
+            text: "Si le complément de sujet se termine par une consonne, on ajoute la particule « 이 ».",
+            audio: AUDIO.EXP_4,
+            cardAudio: AUDIO.NOT_YOHAN
+        },
+        // Page 8: Repeat (저는 요한이 아니에요)
+        {
+            type: 'repeat',
+            instruction: "Répétez après moi.",
+            mainText: "<span class='text-blue-600'>저</span>는 <span class='text-rose-500'>요한</span><span class='text-green-600'>이 아니에요</span>.",
+            sub1: "<span class='text-blue-600'>Je</span> <span class='text-green-600'>ne suis pas</span> <span class='text-rose-500'>Yohan</span>.",
+            sub2: "Je ne suis pas Yohan.",
+            referenceText: "저는 요한이 아니에요",
+            attempts: 3,
+            cardAudio: AUDIO.NOT_YOHAN
+        },
+        // Page 9: Card Audio (저는 의사가 아니에요)
+        {
+            type: 'card_audio',
+            mainText: "<span class='text-blue-600'>저</span>는 <span class='text-rose-500'>의사</span><span class='text-green-600'>가 아니에요</span>.",
+            sub1: "<span class='text-blue-600'>Je</span> <span class='text-green-600'>ne suis pas</span> <span class='text-rose-500'>médecin</span>.",
+            sub2: "Je ne suis pas médecin.",
+            text: "La même règle s'applique lorsque l'on nie une profession ou une nationalité. Il faut ajouter « 가 » après une voyelle et « 이 » après une consonne.",
+            audio: AUDIO.EXP_5,
+            cardAudio: AUDIO.NOT_DOCTOR
+        },
+        // Page 10: Repeat (저는 의사가 아니에요)
+        {
+            type: 'repeat',
+            instruction: "Répétez après moi.",
+            mainText: "<span class='text-blue-600'>저</span>는 <span class='text-rose-500'>의사</span><span class='text-green-600'>가 아니에요</span>.",
+            sub1: "<span class='text-blue-600'>Je</span> <span class='text-green-600'>ne suis pas</span> <span class='text-rose-500'>médecin</span>.",
+            sub2: "Je ne suis pas médecin.",
+            referenceText: "저는 의사가 아니에요",
+            attempts: 3,
+            cardAudio: AUDIO.NOT_DOCTOR
+        },
+        // Page 11: Repeat (저는 한국 사람이 아니에요)
+        {
+            type: 'repeat',
+            instruction: "Répétez après moi.",
+            mainText: "<span class='text-blue-600'>저</span>는 <span class='text-rose-500'>한국</span> <span class='text-green-600'>사람</span><span class='text-purple-600'>이 아니에요</span>.",
+            sub1: "<span class='text-blue-600'>Je</span> <span class='text-purple-600'>ne suis pas</span> une <span class='text-green-600'>personne</span> <span class='text-rose-500'>coréenne</span>.",
+            sub2: "Je ne suis pas coréen(ne).",
+            referenceText: "저는 한국 사람이 아니에요",
+            attempts: 3,
+            cardAudio: AUDIO.NOT_KOREAN
+        },
+        // Page 12: Quiz (제니예요? -> 저는 제니가 아니에요)
+        {
+            type: 'quiz_audio_question',
+            instruction: "Bravo ! Maintenant, répondez à la question.",
+            audioCard: AUDIO.IS_JENNIE, // 제니예요?
+            questionText: "제니예요?", // Hidden initially
+            displayPrompt: "Répondez à la question.",
+            referenceText: "저는 제니가 아니에요",
+            hintAudio: AUDIO.NOT_JENNIE,
+            hintThreshold: 1 
+        },
+        // Page 13: Quiz (학생이에요? -> 저는 학생이에요 OR 저는 학생이 아니에요)
+        {
+            type: 'quiz_audio_question',
+            instruction: "Répondez à la question par vous-même.",
+            audioCard: AUDIO.IS_STUDENT, // 학생이에요?
+            questionText: "학생이에요?", // Hidden initially
+            displayPrompt: "Répondez à la question par vous-même.",
+            referenceArray: ["저는 학생이에요", "저는 학생이 아니에요"],
+            hints: [
+                { text: "Je suis étudiant", audio: AUDIO.AM_STUDENT },
+                { text: "Je ne suis pas étudiant", audio: AUDIO.AM_NOT_STUDENT }
+            ],
+            hintThreshold: 1
+        },
+        // Page 14: Outro
+        {
+            type: 'outro',
+            text: "C'est tout pour cette leçon. Continuez à vous entraîner à l'écrit et à l'oral dans les prochaines leçons. À bientôt !",
+            audio: AUDIO.EXP_6
+        }
+    ];
+
+    // --- Audio & State ---
+    let currentPage = 0;
+    let audioContextInitialized = false;
+    let correctSound, completionSynth, pageTurnSynth;
+    let currentAudioObj = null;
+    let autoPlayTimer = null;
+    const pageStates = {}; 
+
+    async function initAudio() {
+        if (audioContextInitialized) return;
+        try {
+            await Tone.start();
+            correctSound = new Tone.Synth().toDestination();
+            completionSynth = new Tone.PolySynth(Tone.Synth).toDestination();
+            pageTurnSynth = new Tone.MembraneSynth({
+                pitchDecay: 0.008, octaves: 1, oscillator: { type: 'sine' },
+                envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
+            }).toDestination();
+            audioContextInitialized = true;
+        } catch (e) {
+            console.warn("Audio init failed", e);
+        }
+    }
+
+    function playSound(type) {
+        if (!audioContextInitialized) return;
+        switch (type) {
+            case 'correct': correctSound.triggerAttackRelease('C5', '0.1s'); break;
+            case 'turn': pageTurnSynth.triggerAttackRelease("C2", "32n"); break;
+            case 'complete': completionSynth.triggerAttackRelease(["C5", "E5", "G5", "C6"], "4n"); break;
+        }
+    }
+
+    function stopCurrentAudio() {
+        if (autoPlayTimer) { clearTimeout(autoPlayTimer); autoPlayTimer = null; }
+        if (currentAudioObj) {
+            currentAudioObj.pause();
+            currentAudioObj.currentTime = 0;
+            currentAudioObj.onended = null;
+            currentAudioObj = null;
+        }
+    }
+
+    function playAudio(src, onEndCallback) {
+        stopCurrentAudio();
+        stopRecording(null, true);
+        if (!src) {
+            console.warn("Audio source missing");
+            return;
+        }
+        currentAudioObj = new Audio(src);
+        const playPromise = currentAudioObj.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(e => { if(!e.message.includes('interrupted')) console.error("Play error:", e); });
+        }
+        if (onEndCallback) {
+            currentAudioObj.onended = onEndCallback;
+        }
+    }
+
+    // --- UI Logic ---
+    const container = document.getElementById('content-area');
+    const header = document.getElementById('header');
+    const footer = document.getElementById('footer');
+    const pageIndicator = document.getElementById('page-indicator');
+    const btnNext = document.getElementById('btn-next');
+    const btnPrev = document.getElementById('btn-prev');
+
+    function renderPage() {
+        stopCurrentAudio();
+        stopRecording(null, true); 
+
+        container.innerHTML = '';
+        const page = pages[currentPage];
+        
+        if (!pageStates[currentPage]) pageStates[currentPage] = { attemptsUsed: 0, passed: false };
+
+        pageIndicator.innerText = `${currentPage + 1} / ${pages.length}`;
+        
+        if (page.type === 'cover') {
+            header.classList.add('hidden');
+            footer.classList.add('hidden');
+        } else {
+            header.classList.remove('hidden');
+            footer.classList.remove('hidden');
+        }
+
+        btnPrev.disabled = currentPage <= 1;
+        btnPrev.classList.toggle('opacity-0', currentPage <= 1);
+        
+        resetNextButton();
+        
+        switch(page.type) {
+            case 'cover': renderCover(page); break;
+            case 'text': renderTextPage(page); break;
+            case 'card_audio': renderCardAudio(page); break;
+            case 'repeat': renderRepeat(page); break;
+            case 'quiz_audio_question': renderQuizAudioQuestion(page); break; 
+            case 'outro': renderOutro(page); break;
+        }
+
+        checkPageState(page);
+    }
+
+    function resetNextButton() {
+        btnNext.disabled = false;
+        btnNext.classList.remove('bg-gray-400', 'cursor-not-allowed');
+        btnNext.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+        btnNext.innerHTML = `<i class="ph ph-arrow-right icon-fluid-md"></i>`;
+    }
+
+    function disableNextButton() {
+        btnNext.disabled = true;
+        btnNext.classList.add('bg-gray-400', 'cursor-not-allowed');
+        btnNext.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+    }
+
+    function checkPageState(page) {
+        if (['cover', 'text', 'card_audio', 'outro'].includes(page.type)) return;
+        
+        const state = pageStates[currentPage];
+        if (state.passed) {
+             const feedback = document.getElementById('feedback-msg');
+             const recBtn = document.getElementById('rec-btn');
+             if(feedback && !feedback.innerHTML.includes("Excellent")) {
+                 feedback.insertAdjacentHTML('afterbegin', `<span class="text-green-500 font-bold block mb-1">Excellent !</span>`);
+             }
+             if(recBtn) {
+                 recBtn.disabled = true;
+                 recBtn.innerHTML = `<i class="ph ph-check icon-fluid-md text-green-500"></i>`;
+             }
+        } else {
+            disableNextButton();
+            if (state.attemptsUsed >= (page.hintThreshold || 1)) {
+                // If failed, update UI to show question text
+                const qText = document.getElementById('question-text');
+                if (qText) qText.classList.remove('invisible');
+                resetNextButton();
+            }
+        }
+    }
+
+    // --- Renderers ---
+
+    function renderCover(page) {
+        container.innerHTML = `
+            <div class="page-wrapper fade-in text-center">
+                <div class="flex flex-col items-center justify-center space-y-[4vh]">
+                    <div class="w-[15vh] h-[15vh] bg-indigo-100 rounded-full flex items-center justify-center shadow-inner">
+                        <i class="ph ph-chat-circle-text text-[8vh] text-indigo-600"></i>
+                    </div>
+                    <h1 class="text-fluid-xl font-bold text-gray-800 leading-tight">${page.title}</h1>
+                    <p class="text-fluid-lg text-gray-600 font-medium">${page.subtitle}</p>
+                    <button onclick="nextPage()" class="mt-[5vh] px-[4vw] py-[2vh] bg-indigo-600 text-white rounded-full font-bold text-fluid-base shadow-lg hover:bg-indigo-700 transition transform hover:scale-105">
+                        ${page.buttonText}
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderTextPage(page) {
+        if (page.audio) { autoPlayTimer = setTimeout(() => { playAudio(page.audio); }, 1000); }
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
+                    <div class="card-box">
+                        <p class="text-fluid-base text-gray-700 leading-relaxed text-center">
+                            ${page.text}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderCardAudio(page) {
+        if (page.audio) { autoPlayTimer = setTimeout(() => { playAudio(page.audio); }, 1000); }
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                 <div class="flex flex-col items-center max-w-4xl w-full gap-[2vh]">
+                    <div class="card-box py-[4vh] space-y-[2vh]">
+                        <h2 class="text-fluid-xl font-bold text-indigo-900 korean-text">${page.mainText}</h2>
+                        <div class="flex flex-col items-center">
+                            <span class="subtitle-1 text-fluid-sm">${page.sub1}</span>
+                            <span class="subtitle-2 text-fluid-base">${page.sub2}</span>
+                        </div>
+                        <button onclick="playAudio('${page.cardAudio}')" class="mt-[1vh] w-[8vh] h-[8vh] bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition shrink-0 shadow-sm">
+                            <i class="ph ph-speaker-high icon-fluid-md"></i>
+                        </button>
+                    </div>
+                    ${page.text ? `
+                        <div class="bg-indigo-50/50 p-[3vh] rounded-2xl border border-indigo-100 text-center w-full max-w-[800px]">
+                            <p class="text-gray-700 text-fluid-base leading-relaxed">${page.text}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderRepeat(page) {
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
+                    <p class="text-gray-500 font-bold uppercase tracking-widest text-fluid-sm">${page.instruction}</p>
+                    <div class="card-box py-[5vh] space-y-[2vh]">
+                        <div class="flex items-center justify-center gap-4">
+                            <h2 class="text-fluid-xl font-bold text-indigo-900 korean-text">${page.mainText}</h2>
+                            <button onclick="playAudio('${page.cardAudio}')" class="w-[6vh] h-[6vh] bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition shadow-sm">
+                                <i class="ph ph-speaker-high text-xl"></i>
+                            </button>
+                        </div>
+                        ${page.sub1 ? `<span class="subtitle-1 text-fluid-sm">${page.sub1}</span>` : ''}
+                        <span class="subtitle-2 text-fluid-base">${page.sub2}</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-[2vh]">
+                        <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
+                            <i class="ph ph-microphone icon-fluid-lg"></i>
+                        </button>
+                        <div id="feedback-msg" class="h-[3vh] text-fluid-sm font-medium text-gray-500">Appuyez pour parler</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        setupRecording('rec-btn', 'feedback-msg', page.referenceText, page.attempts);
+    }
+
+    function renderQuizAudioQuestion(page) {
+        // Initially hide question text if not failed yet
+        const showText = pageStates[currentPage].attemptsUsed >= (page.hintThreshold || 1);
+        
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
+                    <p class="text-gray-500 font-bold uppercase tracking-widest text-fluid-sm">${page.instruction}</p>
+
+                    <div class="card-box py-[4vh] space-y-[2vh]">
+                         <button onclick="playAudio('${page.audioCard}')" class="mb-2 w-[8vh] h-[8vh] bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition shadow-sm mx-auto">
+                            <i class="ph ph-speaker-high icon-fluid-md"></i>
+                        </button>
+                        <!-- Question Text: Visible only after fail -->
+                        <h2 id="question-text" class="text-fluid-lg font-bold text-gray-800 korean-text ${showText ? '' : 'invisible'}">${page.questionText}</h2>
+                    </div>
+
+                    <!-- Display Prompt Box -->
+                    <div class="w-full max-w-[800px] bg-indigo-50 p-[3vh] rounded-[2rem] border-2 border-indigo-200 border-dashed flex flex-col items-center justify-center">
+                        <span class="text-fluid-base font-bold text-indigo-900 text-center">${page.displayPrompt}</span>
+                    </div>
+
+                    <div class="flex flex-col items-center gap-[2vh]">
+                        <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
+                            <i class="ph ph-microphone icon-fluid-lg"></i>
+                        </button>
+                        <div id="feedback-msg" class="min-h-[3vh] text-fluid-sm font-medium text-gray-500 flex flex-col items-center justify-center w-full">
+                            Appuyez pour répondre
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        const target = page.referenceArray || page.referenceText;
+        setupRecording('rec-btn', 'feedback-msg', target, 3);
+    }
+
+
+    function renderOutro(page) {
+        container.innerHTML = `
+            <div class="page-wrapper fade-in">
+                <div class="flex flex-col items-center justify-center space-y-[4vh]">
+                    <div class="w-[15vh] h-[15vh] bg-green-100 rounded-full flex items-center justify-center mb-4 text-green-600 animate-bounce shadow-lg">
+                        <i class="ph ph-check-fat icon-fluid-lg"></i>
+                    </div>
+                    <h1 class="text-fluid-xl font-bold text-gray-800">Terminé !</h1>
+                    <div class="card-box">
+                        <p class="text-fluid-base text-gray-600 text-center leading-relaxed">
+                            ${page.text}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `;
+        if (page.audio) { autoPlayTimer = setTimeout(() => { playAudio(page.audio); }, 1500); }
+        initAudio().then(() => {
+             playSound('complete');
+             window.parent.postMessage({ type: 'lesson_complete' }, '*');
+        });
+        footer.classList.add('hidden');
+    }
+
+    // --- Navigation & Helper ---
+    function nextPage() {
+        initAudio();
+        playSound('turn');
+        if (currentPage < pages.length - 1) { currentPage++; renderPage(); }
+    }
+    function prevPage() {
+        playSound('turn');
+        if (currentPage > 0) { currentPage--; renderPage(); }
+    }
+
+    btnNext.addEventListener('click', nextPage);
+    btnPrev.addEventListener('click', prevPage);
+
+    // --- Recording Logic ---
+    let mediaRecorder, isRecording = false, recordingTimeout;
+    let recordingState = 'idle'; 
+
+    async function setupRecording(btnId, feedbackId, referenceTarget, attemptsMax) {
+        const btn = document.getElementById(btnId);
+        const feedback = document.getElementById(feedbackId);
+        const page = pages[currentPage];
+        const state = pageStates[currentPage];
+
+        if (state.passed) { btn.disabled = true; return; }
+
+        btn.onclick = async () => {
+            if (attemptsMax && state.attemptsUsed >= attemptsMax && !state.passed) {
+                feedback.innerText = "Nombre de tentatives épuisé.";
+                resetNextButton();
+                return;
+            }
+
+            if (recordingState === 'starting') return; 
+
+            if (recordingState === 'recording') {
+                stopRecording(btn);
+                return;
+            }
+
+            recordingState = 'starting';
+            btn.innerHTML = `<i class="ph ph-spinner animate-spin text-2xl"></i>`;
+            
+            try {
+                await initAudio(); 
+                stopCurrentAudio(); 
+                
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                const audioChunks = [];
+                mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+                
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const reader = new FileReader();
+                    reader.readAsDataURL(audioBlob);
+                    reader.onloadend = async () => {
+                        const base64Audio = reader.result.split(',')[1];
+                        state.attemptsUsed++;
+                        await processAudio(base64Audio, referenceTarget, feedback, btn);
+                    };
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                
+                mediaRecorder.start();
+                recordingState = 'recording';
+                
+                btn.classList.add('recording-pulse', 'bg-red-500', 'text-white', 'border-red-500');
+                btn.classList.remove('bg-white', 'text-indigo-600', 'border-gray-100');
+                btn.innerHTML = `<i class="ph ph-stop icon-fluid-md"></i>`;
+                feedback.innerText = "Écoute en cours...";
+                
+                if (recordingTimeout) clearTimeout(recordingTimeout);
+                recordingTimeout = setTimeout(() => { 
+                    if (recordingState === 'recording') stopRecording(btn); 
+                }, 10000);
+
+            } catch (err) {
+                console.error("Mic Error:", err);
+                feedback.innerText = "Erreur micro.";
+                recordingState = 'idle';
+                btn.innerHTML = `<i class="ph ph-microphone icon-fluid-lg"></i>`;
+            }
+        };
+    }
+
+    function stopRecording(btn, force = false) {
+        if (recordingTimeout) clearTimeout(recordingTimeout);
+        
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+        }
+        recordingState = 'idle';
+        
+        if (btn && !force) {
+            btn.classList.remove('recording-pulse', 'bg-red-500', 'text-white', 'border-red-500');
+            btn.classList.add('bg-white', 'text-indigo-600', 'border-gray-100');
+            btn.innerHTML = `<i class="ph ph-microphone icon-fluid-lg"></i>`;
+        }
+    }
+
+    async function processAudio(audioBase64, referenceTarget, feedbackEl, btnEl, forceFail = false) {
+        if (!forceFail) feedbackEl.innerText = "Analyse...";
+        
+        let result = { text: "" };
+        let score = 0;
+        let passed = false;
+
+        try {
+            if (!forceFail && audioBase64) {
+                const payload = { audioBase64: audioBase64, languageCode: "Kor" };
+                // If referenceTarget is single string, send it.
+                if (typeof referenceTarget === 'string') {
+                    payload.referenceText = referenceTarget;
+                }
+
+                const res = await fetch(CLOVA_API_FUNCTION_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) throw new Error("API Error");
+                result = await res.json();
+                score = result.assessment?.pronunciation_score;
+            }
+
+            const recognizedText = result.text || "";
+            const page = pages[currentPage];
+            const displayScore = score !== undefined ? score : '-';
+            const normalize = (str) => str ? str.replace(/[\s\.\,\?\!]/g, "") : "";
+
+            // --- Validation Logic ---
+            if (!forceFail) {
+                if (Array.isArray(referenceTarget)) {
+                    // Check against multiple allowed answers
+                    const normalizedRec = normalize(recognizedText);
+                    const matched = referenceTarget.some(ref => normalize(ref) === normalizedRec);
+                    if (matched) passed = true;
+                } else if (typeof referenceTarget === 'string') { 
+                    const scorePass = score >= 80;
+                    const textPass = recognizedText && normalize(recognizedText) === normalize(referenceTarget);
+                    if (scorePass && textPass) passed = true; 
+                } else { 
+                    // Open ended
+                    if (recognizedText || score >= 0) passed = true; 
+                }
+            }
+
+            const state = pageStates[currentPage];
+            let msg = "";
+
+            if (passed) {
+                state.passed = true;
+                playSound('correct'); 
+                msg = `<span class="text-green-500 font-bold block mb-1">Excellent !</span>`;
+                if(btnEl) {
+                    btnEl.disabled = true;
+                    btnEl.innerHTML = `<i class="ph ph-check icon-fluid-md text-green-500"></i>`;
+                }
+                resetNextButton();
+            } else {
+                if (state.attemptsUsed >= (page.attempts || 3) || forceFail) {
+                     msg = `<span class="text-orange-500 block mb-1">Nombre de tentatives épuisé.</span>`;
+                     resetNextButton();
+                } else {
+                     msg = `<span class="text-orange-500 block mb-1">Réessayez. (${displayScore})</span>`;
+                }
+                
+                // Show question text on fail (Specific for quiz_audio_question)
+                if (page.type === 'quiz_audio_question') {
+                    const qText = document.getElementById('question-text');
+                    if (qText) qText.classList.remove('invisible');
+                }
+            }
+            
+            if (recognizedText) {
+                msg += `<div class="text-indigo-600 font-medium mt-1 text-sm">"${recognizedText}"</div>`;
+            }
+
+            // Hint Logic 
+            const hintThreshold = page.hintThreshold || 99; // Default high to ignore if not set
+            if ((!passed || forceFail) && state.attemptsUsed >= hintThreshold) {
+                 if (page.hintAudio) { // Single hint
+                     window.playHint = () => playAudio(page.hintAudio);
+                     msg += `<button onclick="playHint()" class="mt-2 flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs hover:bg-yellow-200 mx-auto transition"><i class="ph ph-speaker-high"></i> Indice</button>`;
+                 } else if (page.hints) { // Multiple hints (Page 13)
+                     msg += `<div class="flex gap-2 justify-center mt-2">`;
+                     page.hints.forEach((h, idx) => {
+                         window[`playHint${idx}`] = () => playAudio(h.audio);
+                         msg += `<button onclick="playHint${idx}()" class="flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs hover:bg-yellow-200 transition"><i class="ph ph-speaker-high"></i> ${h.text}</button>`;
+                     });
+                     msg += `</div>`;
+                 }
+            }
+
+            feedbackEl.innerHTML = msg;
+
+        } catch (e) {
+            console.error(e);
+            feedbackEl.innerText = "API Error";
+            if(btnEl) btnEl.disabled = false;
+        }
+    }
+
+    renderPage();
+</script>
+</body>
+</html>
