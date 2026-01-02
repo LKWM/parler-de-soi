@@ -135,7 +135,7 @@
 
 <div id="app-container">
     <div id="header" class="absolute top-0 right-0 p-4 md:p-6 z-20 hidden">
-        <span id="page-indicator" class="font-mono text-gray-400 font-bold text-fluid-sm bg-gray-100 px-3 py-1 rounded-full">1 / 15</span>
+        <span id="page-indicator" class="font-mono text-gray-400 font-bold text-fluid-sm bg-gray-100 px-3 py-1 rounded-full">1 / 17</span>
     </div>
 
     <div id="content-area" class="flex-grow flex flex-col items-center justify-center w-full h-full relative text-center"></div>
@@ -159,7 +159,7 @@
     // Audio Resources
     const AUDIO = {
         NAME: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933258/%E1%84%8B%E1%85%B5%E1%84%85%E1%85%B3%E1%86%B7_g9gzd3.mp3",
-        KOREA: "https://res.cloudinary.com/de76i94ia/video/upload/v1767267953/%E1%84%92%E1%85%A1%E1%86%AB%E1%84%80%E1%85%AE%E1%86%A8_hmchvi.mp3", 
+        KOREA: PLACEHOLDER_AUDIO, 
         WHICH_COUNTRY: "https://res.cloudinary.com/de76i94ia/video/upload/v1767267946/%E1%84%8B%E1%85%A5%E1%84%82%E1%85%B3_%E1%84%82%E1%85%A1%E1%84%85%E1%85%A1_rgjsfu.mp3",
         PERSON: "https://res.cloudinary.com/de76i94ia/video/upload/v1767267940/%E1%84%89%E1%85%A1%E1%84%85%E1%85%A1%E1%86%B7_iqpmzj.mp3",
         
@@ -170,9 +170,7 @@
         Q_NAME: "https://res.cloudinary.com/de76i94ia/video/upload/v1766933257/sentence_1_nqvqxf.mp3", // 이름이 뭐예요?
         AM_KOREAN: "https://res.cloudinary.com/de76i94ia/video/upload/v1767267932/Sentence_3_wqx4my.mp3", // 저는 한국 사람이에요
         
-        AM_STUDENT: "https://res.cloudinary.com/de76i94ia/video/upload/v1767087383/sentence_3_ec5vgm.mp3", // 저는 학생이에요 (Context for Quiz 10)
-        
-        OUTRO_MUSIC: "https://res.cloudinary.com/de76i94ia/video/upload/v1767093704/audio_6_ew2eij.mp3" // Using prev lesson outro as base or effect
+        AM_STUDENT: "https://res.cloudinary.com/de76i94ia/video/upload/v1767087383/sentence_3_ec5vgm.mp3" // 저는 학생이에요
     };
 
     const pages = [
@@ -187,15 +185,15 @@
             type: 'listening_choice',
             instruction: "Choisissez la bonne signification.",
             audio: AUDIO.NAME,
-            options: ["Prénom", "Métier", "Être", "Pays"],
-            correct: "Prénom"
+            options: ["prénom", "métier", "être", "pays"],
+            correct: "prénom"
         },
         // Quiz 2
         {
             type: 'listening_choice',
             instruction: "Choisissez la bonne signification.",
-            audio: AUDIO.KOREA, // Placeholder for [한국]
-            options: ["Étudiant", "Corée", "Quel"],
+            audio: AUDIO.KOREA,
+            options: ["étudiant", "Corée", "quel"],
             correct: "Corée"
         },
         // Quiz 3
@@ -203,89 +201,89 @@
             type: 'listening_choice',
             instruction: "Choisissez la bonne signification.",
             audio: AUDIO.WHICH_COUNTRY,
-            options: ["Qu’est-ce que", "Quel pays", "Qui est", "Venir de"],
-            correct: "Quel pays"
+            options: ["Qu’est-ce que", "quel pays", "qui est", "venir de"],
+            correct: "quel pays"
         },
-        // Quiz 4 (Repeated index in prompt, treating as next)
+        // Quiz 4
         {
             type: 'listening_choice',
             instruction: "Choisissez la bonne signification.",
             audio: AUDIO.PERSON,
-            options: ["Médecin", "Métier", "Personne", "Prénom"],
-            correct: "Personne"
-        },
-        // Quiz 4 (Shadowing) - Duplicate number in prompt
-        {
-            type: 'shadowing',
-            instruction: "Répétez après moi.",
-            audioPrompt: AUDIO.Q_NATIONALITY,
-            displayOriginal: "Vous venez de quel pays ?",
-            displayKorean: "__ 나라 사람이에요?",
-            referenceText: "어느 나라 사람이에요"
+            options: ["médecin", "métier", "personne", "prénom"],
+            correct: "personne"
         },
         // Quiz 5 (Shadowing)
         {
             type: 'shadowing',
             instruction: "Répétez après moi.",
-            audioPrompt: AUDIO.AM_FRENCH,
-            displayOriginal: "Je suis français(e).",
-            displayKorean: "저는 프랑스 __이에요.",
-            referenceText: "저는 프랑스 사람이에요"
+            audioPrompt: AUDIO.Q_NATIONALITY,
+            displayKorean: "__ 나라 사람이에요?",
+            displayTranslation: "Vous venez de quel pays ?",
+            referenceText: "어느 나라 사람이에요"
         },
         // Quiz 6 (Shadowing)
         {
             type: 'shadowing',
             instruction: "Répétez après moi.",
-            audioPrompt: AUDIO.AM_BELGIAN,
-            displayOriginal: "Je suis belge.",
-            displayKorean: "저는 ___ __이에요.",
-            referenceText: "저는 벨기에 사람이에요"
+            audioPrompt: AUDIO.AM_FRENCH,
+            displayKorean: "저는 프랑스 __이에요.",
+            displayTranslation: "Je suis français(e).",
+            referenceText: "저는 프랑스 사람이에요"
         },
-        // Quiz 7 (Speaking Gap)
+        // Quiz 7 (Shadowing)
         {
-            type: 'speaking_gap',
-            instruction: "Dites-le vous-même.",
-            displayOriginal: "Vous venez de quel pays?",
-            displayKorean: "어느 나라 __이에요?",
-            referenceText: "어느 나라 사람이에요",
-            audioPrompt: AUDIO.Q_NATIONALITY // Hint
+            type: 'shadowing',
+            instruction: "Répétez après moi.",
+            audioPrompt: AUDIO.AM_BELGIAN,
+            displayKorean: "저는 ___ __이에요.",
+            displayTranslation: "Je suis belge.",
+            referenceText: "저는 벨기에 사람이에요"
         },
         // Quiz 8 (Speaking Gap)
         {
             type: 'speaking_gap',
             instruction: "Dites-le vous-même.",
-            displayOriginal: "Quel est votre (pré)nom ?",
-            displayKorean: "___ ___?",
-            referenceText: "이름이 뭐예요",
-            audioPrompt: AUDIO.Q_NAME // Hint
-        },
-        // Quiz 8 (Speaking Gap) - Duplicate Num
-        {
-            type: 'speaking_gap',
-            instruction: "Dites-le vous-même.",
-            displayOriginal: "Je suis coréen(ne).",
-            displayKorean: "저는 __ 사람___.",
-            referenceText: "저는 한국 사람이에요",
-            audioPrompt: AUDIO.AM_KOREAN // Hint
+            displayKorean: "어느 나라 __이에요?",
+            displayTranslation: "Vous venez de quel pays?",
+            referenceText: "어느 나라 사람이에요",
+            audioPrompt: AUDIO.Q_NATIONALITY // Hint
         },
         // Quiz 9 (Speaking Gap)
         {
             type: 'speaking_gap',
             instruction: "Dites-le vous-même.",
-            displayOriginal: "Je suis belge.",
+            displayKorean: "___ ___?",
+            displayTranslation: "Quel est votre (pré)nom ?",
+            referenceText: "이름이 뭐예요",
+            audioPrompt: AUDIO.Q_NAME // Hint
+        },
+        // Quiz 10 (Speaking Gap)
+        {
+            type: 'speaking_gap',
+            instruction: "Dites-le vous-même.",
+            displayKorean: "저는 __ 사람___.",
+            displayTranslation: "Je suis coréen(ne).",
+            referenceText: "저는 한국 사람이에요",
+            audioPrompt: AUDIO.AM_KOREAN // Hint
+        },
+        // Quiz 11 (Speaking Gap)
+        {
+            type: 'speaking_gap',
+            instruction: "Dites-le vous-même.",
             displayKorean: "__ ___ _____.",
+            displayTranslation: "Je suis belge.",
             referenceText: "저는 벨기에 사람이에요",
             audioPrompt: AUDIO.AM_BELGIAN // Hint
         },
-        // Quiz 10 (Listening Context)
+        // Quiz 12 (Listening Choice)
         {
             type: 'listening_choice',
             instruction: "Quel est son métier ?",
             audio: AUDIO.AM_STUDENT, 
-            options: ["Médecin", "Étudiant", "Professeur"],
-            correct: "Étudiant"
+            options: ["médecin", "étudiant", "professeur"],
+            correct: "étudiant"
         },
-        // Quiz 11 (Listening Context)
+        // Quiz 13 (Listening Choice)
         {
             type: 'listening_choice',
             instruction: "Quelle est sa nationalité ?",
@@ -293,7 +291,7 @@
             options: ["Brésil", "Corée du sud", "France"],
             correct: "France"
         },
-        // Quiz 12 (Conv Start)
+        // Quiz 14 (Conv Start)
         {
             type: 'conversation_start',
             instruction: "Posez la question vous-même.",
@@ -303,18 +301,17 @@
             replyText: "저는 한국 사람이에요.",
             audioPrompt: AUDIO.Q_NATIONALITY // Hint
         },
-        // Quiz 13 (Conv Reply)
+        // Quiz 15 (Conv Reply) - Modified
         {
             type: 'conversation_reply',
-            instruction: "Répondez à la question.",
+            // instruction removed
             audioPrompt: AUDIO.Q_NATIONALITY, 
-            displayHint: "Répondez à la question.",
-            // Open ended check: 저는 [Noun] 사람이에요
-            referenceText: null 
+            displayHint: "",
+            referenceText: null // Open ended
         },
         {
             type: 'outro',
-            text: "Félicitations ! Apprenez les expressions de négation dans le Chapitre 4 !",
+            text: "Félicitation ! Chapitre 4에서 부정 표현을 배워 보세요!",
             // No audio
         }
     ];
@@ -365,9 +362,15 @@
     function playAudio(src, onEndCallback) {
         stopCurrentAudio();
         stopRecording(null, true);
-        if (!src) return;
+        if (!src) {
+            console.warn("Audio source missing");
+            return;
+        }
         currentAudioObj = new Audio(src);
-        currentAudioObj.play().catch(e => { if(!e.message.includes('interrupted')) console.error("Play error:", e); });
+        const playPromise = currentAudioObj.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(e => { if(!e.message.includes('interrupted')) console.error("Play error:", e); });
+        }
         if (onEndCallback) {
             currentAudioObj.onended = onEndCallback;
         }
@@ -422,6 +425,7 @@
         btnNext.disabled = false;
         btnNext.classList.remove('bg-gray-400', 'cursor-not-allowed');
         btnNext.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+        btnNext.innerHTML = `<i class="ph ph-arrow-right icon-fluid-md"></i>`;
     }
 
     function disableNextButton() {
@@ -457,6 +461,8 @@
         } else {
             disableNextButton();
             if (state.attemptsUsed >= 3) {
+                const feedback = document.getElementById('feedback-msg');
+                // Keep the failed state UI from processAudio
                 resetNextButton();
             }
         }
@@ -575,6 +581,17 @@
                     
                     <div class="card-box py-[5vh] space-y-[2vh]">
                         <p class="text-fluid-xl font-bold text-gray-800 korean-text">${page.displayPrompt}</p>
+                        
+                        <div id="reply-container" class="${isPassed ? 'block' : 'hidden'} mt-6 pt-6 border-t border-gray-100 w-full animate-fade-in transition-all">
+                            <div class="flex flex-col items-center gap-2">
+                                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-2">
+                                    <i class="ph ph-user-circle text-2xl"></i>
+                                </div>
+                                <div class="bg-gray-100 rounded-2xl py-3 px-6 text-gray-800 font-bold text-lg korean-text">
+                                    ${page.replyText}
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="flex flex-col items-center gap-[2vh]">
@@ -583,21 +600,6 @@
                         </button>
                         <div id="feedback-msg" class="min-h-[3vh] text-fluid-sm font-medium text-gray-500 flex flex-col items-center justify-center w-full">
                             Appuyez pour parler
-                        </div>
-                    </div>
-
-                    <!-- Reply Container -->
-                    <div id="reply-container" class="${isPassed ? 'block' : 'hidden'} w-full animate-fade-in transition-all flex justify-center">
-                        <div class="card-box py-[3vh] space-y-[2vh] bg-green-50 border-green-100 shadow-md">
-                            <div class="flex flex-col items-center gap-2">
-                                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-1">
-                                    <i class="ph ph-user-circle text-2xl"></i>
-                                </div>
-                                <button onclick="playAudio('${page.replyAudio}')" class="flex items-center gap-2 px-4 py-2 bg-white rounded-2xl hover:bg-gray-100 transition text-gray-800 font-bold text-lg korean-text shadow-sm border border-green-200">
-                                    <i class="ph ph-speaker-high text-indigo-500"></i>
-                                    ${page.replyText}
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -614,7 +616,7 @@
                         <i class="ph ph-speaker-high text-lg"></i> Écouter la question
                     </button>
 
-                    <p class="text-gray-500 font-bold uppercase tracking-widest text-fluid-sm">${page.instruction}</p>
+                    <!-- Instruction Removed Here -->
                     
                     <div class="w-full max-w-[800px] bg-indigo-50 p-[5vh] rounded-[2rem] border-2 border-indigo-200 border-dashed flex flex-col items-center space-y-[1.5vh]">
                         <span class="text-fluid-lg font-bold text-gray-800 text-center">${page.displayHint}</span>
@@ -625,7 +627,7 @@
                             <i class="ph ph-microphone icon-fluid-lg"></i>
                         </button>
                         <div id="feedback-msg" class="min-h-[3vh] text-fluid-sm font-medium text-gray-500 flex flex-col items-center justify-center w-full">
-                            Dites votre nationalité
+                            Dites votre nom complet
                         </div>
                     </div>
                 </div>
@@ -687,9 +689,10 @@
             if (attemptsMax && state.attemptsUsed >= attemptsMax && !state.passed) {
                 feedback.innerText = "Nombre de tentatives épuisé.";
                 resetNextButton();
-                // Special logic for Quiz 12 (Conv Start) to show reply even if failed
+                // Special logic for Quiz 14 (Conv Start) to show reply even if failed
                 if (page.type === 'conversation_start') {
-                    await processAudio(null, referenceText, feedback, btn, true); 
+                    const replyContainer = document.getElementById('reply-container');
+                    if(replyContainer) replyContainer.classList.remove('hidden');
                 }
                 return;
             }
@@ -797,11 +800,7 @@
                     body: JSON.stringify(payload)
                 });
 
-                if (!res.ok) {
-                     const errText = await res.text();
-                     console.error("API Error details:", res.status, errText);
-                     throw new Error("API Error: " + res.status);
-                }
+                if (!res.ok) throw new Error("API Error");
                 result = await res.json();
                 score = result.assessment?.pronunciation_score;
             }
@@ -809,6 +808,7 @@
             const recognizedText = result.text || "";
             const page = pages[currentPage];
             const displayScore = score !== undefined ? score : '-';
+            const normalize = (str) => str ? str.replace(/[\s\.\,\?\!]/g, "") : "";
 
             // --- Validation Logic ---
             if (!forceFail) {
@@ -816,7 +816,6 @@
                     // Quiz 13: Special Grammar Check (Nationality)
                     passed = checkKoreanNationalityGrammar(recognizedText);
                 } else if (referenceText) { 
-                    // Standard Reference Check
                     const normalize = (str) => str ? str.replace(/[\s\.\,\?\!]/g, "") : "";
                     const scorePass = score >= 80;
                     const textPass = recognizedText && normalize(recognizedText) === normalize(referenceText);
@@ -833,7 +832,7 @@
             if (passed) {
                 state.passed = true;
                 playSound('correct'); 
-                const scoreText = page.type === 'conversation_reply' ? '' : ` (${displayScore})`;
+                const scoreText = page.type.includes('conversation_reply') ? '' : ` (${displayScore})`;
                 msg = `<span class="text-green-500 font-bold block mb-1">Excellent !${scoreText}</span>`;
                 if(btnEl) {
                     btnEl.disabled = true;
@@ -859,8 +858,9 @@
                 msg += `<div class="text-indigo-600 font-medium mt-1 text-sm">"${recognizedText}"</div>`;
             }
 
-            // Hint Logic (Not for Repeat pages, Shadowing)
-            const isExcludedFromHint = page.type === 'repeat' || page.type === 'shadowing';
+            // Hint Logic (Not for Repeat pages)
+            // Shadowing (Quiz 4, 5, 6) has audioPrompt but should NOT show button because card has it
+            const isExcludedFromHint = page.type === 'repeat' || page.type === 'shadowing' || page.type === 'conversation_reply';
             
             if ((!passed || forceFail) && page.audioPrompt && !isExcludedFromHint) {
                  window.playHint = () => playAudio(page.audioPrompt);
