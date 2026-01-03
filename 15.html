@@ -276,6 +276,23 @@
             justify-content: center;
         }
         #paused-overlay.visible { display: flex; }
+        
+        /* Mission Card */
+        .mission-card {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
+            border: 1px solid #bfdbfe;
+            border-radius: 1.5rem;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .mission-card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 6px;
+            background: linear-gradient(90deg, #60a5fa, #4f46e5);
+        }
 
     </style>
 </head>
@@ -298,13 +315,34 @@
 
     <!-- Cover Page -->
     <div id="page-cover" class="absolute inset-0 bg-white z-30 flex flex-col items-center justify-center p-6 text-center fade-in">
-        <div class="flex flex-col items-center justify-center space-y-[4vh]">
-            <div class="w-[15vh] h-[15vh] bg-indigo-100 rounded-full flex items-center justify-center shadow-inner">
+        <div class="flex flex-col items-center justify-center space-y-[4vh] max-w-lg w-full">
+            <div class="w-[15vh] h-[15vh] bg-indigo-100 rounded-full flex items-center justify-center shadow-inner mb-2">
                 <i class="ph-fill ph-chats-circle text-[8vh] text-indigo-600"></i>
             </div>
             <h1 class="text-fluid-xl font-bold text-gray-800 leading-tight">한국어로 말하기</h1>
-            <p class="text-fluid-lg text-gray-600 font-medium">Jimin, l'intervieweur coréenne, vous pose des questions.<br>Répondez-y.</p>
-            <button onclick="startLesson()" class="mt-[5vh] px-[4vw] py-[2vh] bg-indigo-600 text-white rounded-full font-bold text-fluid-base shadow-lg hover:bg-indigo-700 transition transform hover:scale-105">
+            
+            <!-- Optimized Mission Card -->
+            <div class="mission-card w-full text-left">
+                <div class="flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-target text-indigo-600 text-xl"></i>
+                    <h3 class="font-bold text-indigo-900 text-lg uppercase tracking-wide">Mission</h3>
+                </div>
+                <p class="text-gray-700 font-medium leading-relaxed text-fluid-sm">
+                    Jimin, l'intervieweur coréenne, vous pose des questions. 
+                </p>
+                <ul class="mt-3 space-y-2 text-fluid-sm text-gray-600">
+                    <li class="flex items-start gap-2">
+                        <i class="ph-bold ph-check-circle text-indigo-500 mt-0.5"></i>
+                        <span>Répondez en utilisant les expressions des leçons 1 à 14.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="ph-bold ph-check-circle text-indigo-500 mt-0.5"></i>
+                        <span>Vous avez <strong>3 essais</strong> par question.</span>
+                    </li>
+                </ul>
+            </div>
+
+            <button onclick="startLesson()" class="mt-[2vh] px-[6vw] py-[2vh] bg-indigo-600 text-white rounded-full font-bold text-fluid-base shadow-lg hover:bg-indigo-700 transition transform hover:scale-105 active:scale-95">
                 C’est parti !
             </button>
         </div>
@@ -376,7 +414,9 @@
     // --- Config & Assets ---
     const BASE_44_ORIGIN = "https://coreeno.base44.app"; 
     const CLOVA_SPEECH_URL = BASE_44_ORIGIN + '/api/functions/naverClovaSpeech';
-    const CLOVA_STUDIO_URL = BASE_44_ORIGIN + '/api/functions/naverClovaStudio';
+    
+    // [중요] 아래 경로가 실제 Base44에 생성한 Function 이름과 일치해야 합니다.
+    const CLOVA_STUDIO_URL = "https://coreeno.base44.app/api/apps/69021ec9e4512a451556d88d/functions/ClovaStudio"
 
     const AUDIO_ASSETS = {
         GREETING: "https://res.cloudinary.com/de76i94ia/video/upload/v1767417490/C1_S1_bs9ssk.mp3", 
@@ -400,30 +440,44 @@
     const TURNS = [
         {
             id: 1, agentAudio: AUDIO_ASSETS.GREETING, agentText: "안녕하세요?",
-            type: "simple_match", expected: ["네 안녕하세요", "안녕하세요", "네"],
+            type: "simple_match", expected: ["네 안녕하세요", "안녕하세요"],
             hint1: "Dites “Bonjour” en coréen.", hint2: "Dites “안녕하세요”",
-            forceQuitAudio: null, successAudio: null
+            // successText: "안녕하세요!", // [Removed] Turn 1 success text to skip display
+            forceQuitText: "시간이 없어요. 다음 질문으로 넘어갈게요.",
+            forceQuitAudio: AUDIO_ASSETS.TIMEOUT_MOVE_ON,
+            successAudio: null
         },
         {
             id: 2, agentAudio: AUDIO_ASSETS.Q_NAME, agentText: "이름이 뭐예요?",
             type: "ai_eval",
             aiInstruction: `“이름이 뭐예요?”라는 질문에 대한 답으로 적절한지 확인합니다.\n정답은 “저는 (유저 이름)이에요/예요” 형태여야 합니다. 자음 뒤 “이에요”, 모음 뒤 “예요”를 사용하는 문법 규칙을 어긴 경우 [wrong grammar] 라고 응답합니다.\n정답에는 이름으로 유추되는 단어가 포함되어야 합니다. 단어가 이름이 아닌 특정 의미를 가지는 경우, 질문을 제대로 이해하지 못하는 것으로 간주되는 경우 [wrong vocabulary] 로 응답합니다. 외국어 이름이 사용될 수 있으므로, 유연하게 평가합니다.\nuser input 이 ”저는(생략 가능) [유저 이름]이에요/예요”의 구조를 갖추고 있으며, 문법적으로 정확하고, 본인의 이름을 말하는 것으로 유추되는 경우, [correct] 로 응답합니다.\n응답에는 [wrong grammar] [wrong vocabulary] [correct] 중 1개만 사용할 수 있으며 부연 설명이나 해석 등을 덧붙이지 않습니다.`,
             hintVocab: "Dites votre prénom en coréen.", hintGrammar: "Dites “저는 (prénom)이에요/예요.”",
-            forceQuitAudio: AUDIO_ASSETS.FQ_NAME, successAudio: AUDIO_ASSETS.REACT_NAME
+            successText: "반가워요. 저는 지민이에요.", 
+            forceQuitText: "시간이 없어요. 다음 질문으로 넘어갈게요.", 
+            forceQuitAudio: AUDIO_ASSETS.TIMEOUT_MOVE_ON, 
+            successAudio: AUDIO_ASSETS.REACT_NAME
         },
         {
             id: 3, agentAudio: AUDIO_ASSETS.Q_JOB, agentText: "직업이 뭐예요?",
             type: "ai_eval",
-            aiInstruction: `“직업이 뭐예요?”라는 질문에 대한 답으로 적절한지 확인한다.\n정답은 “저는 [직업]이에요/예요” 형태여야 한다. 자음 뒤 “이에요”, 모음 뒤 “예요”를 사용하는 문법 규칙을 어긴 경우 [wrong grammar] 라고 응답한다.\n[직업]란에 직업으로 인정할 수 없는 단어를 사용한 경우, 이해할 수 없는 단어를 사용한 경우 [wrong vocabulary] 로 응답한다. 한국어로 충분히 번역이 가능한 단어를 외국어로 음차한 경우 (예. 티처)도 이에 해당한다.\nuser input 이 ”저는(생략 가능) [직업]이에요/예요”의 구조를 갖추고 있으며, 문법적으로 정확하고, 직업을 말하는 경우, [correct] 로 응답한다.\n응답에는 [wrong grammar] [wrong vocabulary] [correct] 중 1개만 사용할 수 있으며 부연 설명이나 해석 등을 덧붙이지 않는다.`,
+            // [Updated] Turn 3 Agent Instruction
+            aiInstruction: `“직업이 뭐예요?”라는 질문에 대한 답으로 적절한지 확인한다.\n정답은 “저는 [직업]이에요/예요” 형태여야 한다. ‘이다’가 아닌 다른 동사를 사용한 경우, 자음 뒤 “이에요”, 모음 뒤 “예요”를 사용하는 문법 규칙을 어긴 경우 [wrong grammar] 라고 응답한다.\n[직업]란에 직업이 아닌 단어를 말하는 경우 [wrong vocabulary] 로 응답한다. 한국어로 충분히 번역이 가능한 단어를 외국어로 음차한 경우 (예. 티처)도 이에 해당한다.\nuser input 이 ”저는(생략 가능) [직업]이에요/예요”의 구조를 갖추고 있으며, 문법적으로 정확하고, 직업을 말하는 경우, [correct] 로 응답한다.\n응답에는 [wrong grammar] [wrong vocabulary] [correct] 중 1개만 사용할 수 있으며 부연 설명이나 해석 등을 덧붙이지 않는다.`,
             hintVocab: "Dites votre métier en coréen.", hintGrammar: "Dites “저는 [métier]예요/이에요.”",
-            forceQuitAudio: null, successAudio: AUDIO_ASSETS.REACT_JOB
+            successText: "그렇군요. 알려주셔서 감사해요.", 
+            forceQuitText: "시간이 없어요. 다음 질문으로 넘어갈게요.", 
+            forceQuitAudio: AUDIO_ASSETS.TIMEOUT_MOVE_ON, 
+            successAudio: AUDIO_ASSETS.REACT_JOB
         },
         {
             id: 4, agentAudio: AUDIO_ASSETS.Q_NATION, agentText: "어느 나라 사람이에요?",
             type: "ai_eval",
-            aiInstruction: `“어느 나라 사람이에요?”라는 질문에 대한 답으로 적절한지 확인한다.\n정답은 “저는 [국가] 사람이에요” 형태여야 한다. 이에 해당하는 문법 규칙을 어긴 경우 [wrong grammar] 라고 응답한다.\n[국가]란에 국가나 지명으로 인정할 수 없는 단어를 사용한 경우, 이해할 수 없는 단어를 사용한 경우 [wrong vocabulary] 로 응답한다. 한자어 국가명을 번역하지 않고 음차한 경우도 이에 해당한다 (예. 아메리카)\nuser input 이 ”저는(생략 가능) [국가] 사람이에요”의 구조를 갖추고 있으며, 문법적으로 정확하고, 국적을 말하는 경우, [correct] 로 응답한다.\n응답에는 [wrong grammar] [wrong vocabulary] [correct] 중 1개만 사용할 수 있으며 부연 설명이나 해석 등을 덧붙이지 않는다.`,
+            // [Updated] Turn 4 Agent Instruction
+            aiInstruction: `“어느 나라 사람이에요?”라는 질문에 대한 답으로 적절한지 확인한다.\n정답은 “저는 [국가] 사람이에요” 형태여야 한다. 이에 해당하는 문법 규칙을 어긴 경우 [wrong grammar] 라고 응답한다.\n[국가]란에 국가명이 아닌 단어를 사용한 경우 [wrong vocabulary] 로 응답한다. 도시 이름을 말하는 경우, 국가명의 번역이 잘못된 경우도 이에 해당한다.\nuser input 이 ”저는(생략 가능) [국가] 사람이에요”의 구조를 갖추고 있으며, 문법적으로 정확하고, 국적을 말하는 경우, [correct] 로 응답한다.\n응답에는 [wrong grammar] [wrong vocabulary] [correct] 중 1개만 사용할 수 있으며 부연 설명이나 해석 등을 덧붙이지 않는다.`,
             hintVocab: "Dites votre nationalité.", hintGrammar: "Dites “저는 [pays]사람 이에요.”",
-            forceQuitAudio: AUDIO_ASSETS.FQ_NATION, successAudio: AUDIO_ASSETS.REACT_NATION
+            successText: "그렇군요! 저는 한국 사람이에요.", 
+            forceQuitText: "저는 한국 사람이에요.", 
+            forceQuitAudio: AUDIO_ASSETS.FQ_NATION, 
+            successAudio: AUDIO_ASSETS.REACT_NATION
         },
         {
             id: 5, agentAudio: AUDIO_ASSETS.OUTRO, agentText: "수고하셨어요! 오늘 정말 즐거웠어요.",
@@ -453,6 +507,38 @@
         callback: null
     };
 
+    // --- Effects (Audio Context) ---
+    let audioContextInitialized = false;
+    let pageTurnSynth, completionSynth;
+
+    async function initEffects() {
+        if (audioContextInitialized) return;
+        await Tone.start();
+        
+        // 페이지 넘김 효과음 (북소리 느낌의 둔탁한 소리)
+        pageTurnSynth = new Tone.MembraneSynth({
+            pitchDecay: 0.008,
+            octaves: 1,
+            oscillator: { type: 'sine' },
+            envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
+        }).toDestination();
+
+        // 레슨 종료 효과음 (화음)
+        completionSynth = new Tone.PolySynth(Tone.Synth).toDestination();
+        
+        audioContextInitialized = true;
+    }
+
+    function playSound(type) {
+        if (!audioContextInitialized) return;
+        
+        if (type === 'page_turn') {
+            pageTurnSynth.triggerAttackRelease("C2", "8n");
+        } else if (type === 'complete') {
+            completionSynth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "4n");
+        }
+    }
+
     const chatHistory = document.getElementById('chat-history');
     const statusText = document.getElementById('status-text');
     const btnMic = document.getElementById('btn-mic');
@@ -463,7 +549,7 @@
     const pausedOverlay = document.getElementById('paused-overlay');
     const btnPause = document.getElementById('btn-pause');
 
-    async function initAudio() { await Tone.start(); }
+    // async function initAudio() { await Tone.start(); } // Merged into initEffects
 
     function playAudio(url, onEnd) {
         if (!url) { if (onEnd) onEnd(); return; }
@@ -508,19 +594,22 @@
 
     // --- Main Logic ---
     function startLesson() {
-        // Request Mic Permission Early
-        navigator.mediaDevices.getUserMedia({ audio: true })
-            .then(stream => {
-                stream.getTracks().forEach(track => track.stop()); // Stop immediately
-                initAudio();
-                document.getElementById('page-cover').classList.add('hidden');
-                document.getElementById('page-chat').classList.remove('hidden');
-                runTurn();
-            })
-            .catch(err => {
-                console.error("Mic error", err);
-                alert("Microphone requis pour cette leçon.");
-            });
+        // Init Effects & Mic
+        initEffects().then(() => {
+            playSound('page_turn'); // Cover -> Chat Effect
+            
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    stream.getTracks().forEach(track => track.stop()); // Stop immediately
+                    document.getElementById('page-cover').classList.add('hidden');
+                    document.getElementById('page-chat').classList.remove('hidden');
+                    runTurn();
+                })
+                .catch(err => {
+                    console.error("Mic error", err);
+                    alert("Microphone requis pour cette leçon.");
+                });
+        });
     }
 
     function quitLesson() {
@@ -530,7 +619,7 @@
 
     function runTurn() {
         const turn = TURNS[currentTurnIndex];
-        turnAttempts = 0;
+        turnAttempts = 0; 
         turnTimeoutCount = 0;
         
         if (turn.type === 'ending') {
@@ -679,6 +768,8 @@
         // 2. Remote Logic (Studio AI) - Chat Completions v3 Structure
         if (turn.type === 'ai_eval') {
             try {
+                console.log(`[Eval] Sending to Studio: ${CLOVA_STUDIO_URL}`, { userInput: text });
+
                 const aiRes = await fetch(CLOVA_STUDIO_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -688,9 +779,21 @@
                     })
                 });
                 
-                if(!aiRes.ok) throw new Error("Studio API Error");
+                // 에러 핸들링 강화
+                if(!aiRes.ok) {
+                    const errorText = await aiRes.text();
+                    console.error("[Eval] Backend Error:", errorText);
+                    throw new Error(`Studio API Failed: ${aiRes.status} ${aiRes.statusText} - ${errorText}`);
+                }
 
                 const aiData = await aiRes.json(); 
+                console.log("[Eval] Received:", aiData);
+
+                if (aiData.error) {
+                    console.error("[Eval] Logic Error:", aiData.error, aiData.details);
+                    throw new Error(aiData.error);
+                }
+
                 const aiOutput = aiData.result; 
 
                 if (!aiOutput) throw new Error("Empty Studio Result");
@@ -704,19 +807,19 @@
                 handleResult(resultType);
 
             } catch (e) {
-                console.warn("AI API Failed", e);
-                handleStudioError();
+                console.warn("[Eval] Exception caught:", e);
+                handleStudioError(e); 
             }
         }
     }
 
-    function handleStudioError() {
-        addHint("Erreur: veuillez contacter le développeur");
+    function handleStudioError(e) {
+        addHint("Veuillez contacter le développeur");
         turnAttempts++;
         if (turnAttempts >= 3) {
              handleMaxAttempts();
         } else {
-             statusText.innerText = "Erreur API. Réessayez.";
+             statusText.innerText = "Réessayez...";
              setTimeout(() => { startUserWindow(); }, 1500);
         }
     }
@@ -732,14 +835,21 @@
             
             updateScore(points);
             
+            // [Updated] Success Text Handling
+            if (turn.successText) {
+                addMessage('agent', turn.successText);
+            }
+
             if (turn.successAudio) {
                 playAudio(turn.successAudio, nextTurn);
             } else {
-                nextTurn();
+                // If text was shown but no audio, wait a bit
+                setTimeout(nextTurn, 1500);
             }
 
         } else {
             turnAttempts++;
+            // Check logic: attempts 0->1 (Fail), 1->2 (Fail), 2->3 (Max)
             if (turnAttempts >= 3) {
                 handleMaxAttempts();
             } else {
@@ -751,10 +861,17 @@
                     else hintMsg = turn.hintVocab || turn.hint1; 
                 }
 
-                playAudio(AUDIO_ASSETS.REACTION_FAIL);
                 addHint(hintMsg);
-                statusText.innerText = "Réessayez...";
-                setTimeout(() => { startUserWindow(); }, 1000);
+                
+                // 질문 재생 (텍스트+오디오)
+                setTimeout(() => {
+                    addMessage('agent', turn.agentText);
+                    playAudio(turn.agentAudio, () => {
+                         startUserWindow();
+                    });
+                }, 1500); 
+                
+                statusText.innerText = "Écoutez...";
             }
         }
     }
@@ -762,16 +879,25 @@
     function handleMaxAttempts() {
          const turn = TURNS[currentTurnIndex];
          updateScore(0);
-         if (turn.forceQuitAudio) {
-             playAudio(turn.forceQuitAudio, nextTurn);
+         
+         // [Updated] Force Quit Text Handling (Req #2, #4)
+         const fqText = turn.forceQuitText || "시간이 없어요. 다음 질문으로 넘어갈게요.";
+         addMessage('agent', fqText);
+
+         // [Updated] Force Quit Audio Handling (Req #2)
+         const fqAudio = turn.forceQuitAudio || AUDIO_ASSETS.TIMEOUT_MOVE_ON;
+
+         if (fqAudio) {
+             playAudio(fqAudio, nextTurn);
          } else {
-             nextTurn();
+             setTimeout(nextTurn, 2000);
          }
     }
 
     function nextTurn() {
         currentTurnIndex++;
         if (currentTurnIndex < TURNS.length) {
+            playSound('page_turn'); // [Added] Next Turn Effect
             runTurn();
         } else {
             finishLesson();
@@ -779,7 +905,10 @@
     }
 
     function finishLesson() {
+        // [Added] Complete Sound & Immediate PostMessage
+        playSound('complete');
         window.parent.postMessage({ type: 'lesson_complete', score: totalScore }, '*');
+        
         document.getElementById('page-chat').classList.add('hidden');
         document.getElementById('page-outro').classList.remove('hidden');
         document.getElementById('final-score').innerText = `${totalScore}/120`;
