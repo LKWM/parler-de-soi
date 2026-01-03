@@ -442,7 +442,6 @@
             id: 1, agentAudio: AUDIO_ASSETS.GREETING, agentText: "안녕하세요?",
             type: "simple_match", expected: ["네 안녕하세요", "안녕하세요"],
             hint1: "Dites “Bonjour” en coréen.", hint2: "Dites “안녕하세요”",
-            // successText: "안녕하세요!", // [Removed] Turn 1 success text to skip display
             forceQuitText: "시간이 없어요. 다음 질문으로 넘어갈게요.",
             forceQuitAudio: AUDIO_ASSETS.TIMEOUT_MOVE_ON,
             successAudio: null
@@ -472,7 +471,7 @@
             id: 4, agentAudio: AUDIO_ASSETS.Q_NATION, agentText: "어느 나라 사람이에요?",
             type: "ai_eval",
             // [Updated] Turn 4 Agent Instruction
-            aiInstruction: `“어느 나라 사람이에요?”라는 질문에 대한 답으로 적절한지 확인한다.\n정답은 “저는 [국가] 사람이에요” 형태여야 한다. 이에 해당하는 문법 규칙을 어긴 경우 [wrong grammar] 라고 응답한다.\n[국가]란에 국가명이 아닌 단어를 사용한 경우 [wrong vocabulary] 로 응답한다. 도시 이름을 말하는 경우, 국가명의 번역이 잘못된 경우도 이에 해당한다.\nuser input 이 ”저는(생략 가능) [국가] 사람이에요”의 구조를 갖추고 있으며, 문법적으로 정확하고, 국적을 말하는 경우, [correct] 로 응답한다.\n응답에는 [wrong grammar] [wrong vocabulary] [correct] 중 1개만 사용할 수 있으며 부연 설명이나 해석 등을 덧붙이지 않는다.`,
+            aiInstruction: `“어느 나라 사람이에요?”라는 질문에 대한 답으로 적절한지 확인한다.\n정답은 “저는 [국가] 사람이에요” 형태여야 한다. ‘사람’이라는 단어를 사용하지 않거나 동사 ‘이다’를 제대로 활용하지 못하는 경우 [wrong grammar] 라고 응답한다.\n[국가]란에 국가명이 아닌 단어를 사용한 경우 [wrong vocabulary] 로 응답한다. 도시 이름을 말하는 경우, 국가명의 번역이 잘못된 경우도 이에 해당한다.\nuser input 이 ”저는(생략 가능) [국가] 사람이에요”의 구조를 갖추고 있으며, 문법적으로 정확하고, 국적을 말하는 경우, [correct] 로 응답한다.\n응답에는 [wrong grammar] [wrong vocabulary] [correct] 중 1개만 사용할 수 있으며 부연 설명이나 해석 등을 덧붙이지 않는다.`,
             hintVocab: "Dites votre nationalité.", hintGrammar: "Dites “저는 [pays]사람 이에요.”",
             successText: "그렇군요! 저는 한국 사람이에요.", 
             forceQuitText: "저는 한국 사람이에요.", 
@@ -515,7 +514,6 @@
         if (audioContextInitialized) return;
         await Tone.start();
         
-        // 페이지 넘김 효과음 (북소리 느낌의 둔탁한 소리)
         pageTurnSynth = new Tone.MembraneSynth({
             pitchDecay: 0.008,
             octaves: 1,
@@ -523,7 +521,6 @@
             envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
         }).toDestination();
 
-        // 레슨 종료 효과음 (화음)
         completionSynth = new Tone.PolySynth(Tone.Synth).toDestination();
         
         audioContextInitialized = true;
@@ -548,8 +545,6 @@
     const chatWrapper = document.getElementById('chat-wrapper');
     const pausedOverlay = document.getElementById('paused-overlay');
     const btnPause = document.getElementById('btn-pause');
-
-    // async function initAudio() { await Tone.start(); } // Merged into initEffects
 
     function playAudio(url, onEnd) {
         if (!url) { if (onEnd) onEnd(); return; }
@@ -582,7 +577,6 @@
         pausedOverlay.classList.remove('visible');
         if (activeAudio) activeAudio.play();
         
-        // Timer Resume Fix: Reset lastTick to now so we don't count paused time
         if (timerState.remaining > 0 && timerState.callback) {
             timerState.lastTick = performance.now();
             timerState.reqId = requestAnimationFrame(timerLoop);
@@ -594,13 +588,12 @@
 
     // --- Main Logic ---
     function startLesson() {
-        // Init Effects & Mic
         initEffects().then(() => {
-            playSound('page_turn'); // Cover -> Chat Effect
+            playSound('page_turn'); 
             
             navigator.mediaDevices.getUserMedia({ audio: true })
                 .then(stream => {
-                    stream.getTracks().forEach(track => track.stop()); // Stop immediately
+                    stream.getTracks().forEach(track => track.stop()); 
                     document.getElementById('page-cover').classList.add('hidden');
                     document.getElementById('page-chat').classList.remove('hidden');
                     runTurn();
@@ -653,8 +646,6 @@
         canRecord = true;
         statusText.innerText = "À vous ! (Enregistrement auto)";
         enableMic();
-        
-        // AUTO RECORDING START
         handleMicClick();
     }
 
@@ -679,7 +670,6 @@
                 micIcon.classList.add('ph-stop');
                 statusText.innerText = "Enregistrement... (Max 14.5s)";
                 
-                // Restart visual timer for recording duration (max 14.5s)
                 stopVisualTimer(); 
                 startVisualTimer(14500, () => {
                     if (isRecording) stopRecording();
@@ -716,7 +706,6 @@
         reader.onloadend = async () => {
             const base64 = reader.result.split(',')[1];
             try {
-                // STT ONLY (Standard)
                 const sttRes = await fetch(CLOVA_SPEECH_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -740,7 +729,6 @@
         };
     }
 
-    // New Function: STT Failure Logic
     function handleSttFailure() {
         turnAttempts++;
         if (turnAttempts >= 3) {
@@ -749,7 +737,6 @@
             addHint("잘 못 들었어요. 다시 말해 주세요.");
             playAudio(AUDIO_ASSETS.REACTION_FAIL);
             statusText.innerText = "Réessayez...";
-            // Auto restart
             setTimeout(() => { startUserWindow(); }, 1000);
         }
     }
@@ -757,7 +744,6 @@
     async function evaluateAnswer(text) {
         const turn = TURNS[currentTurnIndex];
 
-        // 1. Local Logic (Simple Match)
         if (turn.type === 'simple_match') {
             const cleanText = text.replace(/[^\w\sㄱ-ㅎㅏ-ㅣ가-힣]/g, '').trim();
             const isMatch = turn.expected.some(exp => cleanText.includes(exp.replace(/[^\w\sㄱ-ㅎㅏ-ㅣ가-힣]/g, '')));
@@ -765,21 +751,32 @@
             return;
         } 
         
-        // 2. Remote Logic (Studio AI) - Chat Completions v3 Structure
         if (turn.type === 'ai_eval') {
             try {
-                console.log(`[Eval] Sending to Studio: ${CLOVA_STUDIO_URL}`, { userInput: text });
+                // Construct messages array for Clova API
+                const messages = [
+                    {
+                        role: 'system',
+                        content: [
+                            { type: 'text', text: turn.aiInstruction }
+                        ]
+                    },
+                    {
+                        role: 'user',
+                        content: [
+                             { type: 'text', text: text }
+                        ]
+                    }
+                ];
+
+                console.log(`[Eval] Sending to Studio: ${CLOVA_STUDIO_URL}`, messages);
 
                 const aiRes = await fetch(CLOVA_STUDIO_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        userInput: text, // Changed from prompt to userInput
-                        agentInstruction: turn.aiInstruction
-                    })
+                    body: JSON.stringify({ messages }) // Send messages directly
                 });
                 
-                // 에러 핸들링 강화
                 if(!aiRes.ok) {
                     const errorText = await aiRes.text();
                     console.error("[Eval] Backend Error:", errorText);
@@ -835,7 +832,6 @@
             
             updateScore(points);
             
-            // [Updated] Success Text Handling
             if (turn.successText) {
                 addMessage('agent', turn.successText);
             }
@@ -843,13 +839,11 @@
             if (turn.successAudio) {
                 playAudio(turn.successAudio, nextTurn);
             } else {
-                // If text was shown but no audio, wait a bit
                 setTimeout(nextTurn, 1500);
             }
 
         } else {
             turnAttempts++;
-            // Check logic: attempts 0->1 (Fail), 1->2 (Fail), 2->3 (Max)
             if (turnAttempts >= 3) {
                 handleMaxAttempts();
             } else {
@@ -863,7 +857,6 @@
 
                 addHint(hintMsg);
                 
-                // 질문 재생 (텍스트+오디오)
                 setTimeout(() => {
                     addMessage('agent', turn.agentText);
                     playAudio(turn.agentAudio, () => {
@@ -880,11 +873,9 @@
          const turn = TURNS[currentTurnIndex];
          updateScore(0);
          
-         // [Updated] Force Quit Text Handling (Req #2, #4)
          const fqText = turn.forceQuitText || "시간이 없어요. 다음 질문으로 넘어갈게요.";
          addMessage('agent', fqText);
 
-         // [Updated] Force Quit Audio Handling (Req #2)
          const fqAudio = turn.forceQuitAudio || AUDIO_ASSETS.TIMEOUT_MOVE_ON;
 
          if (fqAudio) {
@@ -897,7 +888,7 @@
     function nextTurn() {
         currentTurnIndex++;
         if (currentTurnIndex < TURNS.length) {
-            playSound('page_turn'); // [Added] Next Turn Effect
+            playSound('page_turn'); 
             runTurn();
         } else {
             finishLesson();
@@ -905,7 +896,6 @@
     }
 
     function finishLesson() {
-        // [Added] Complete Sound & Immediate PostMessage
         playSound('complete');
         window.parent.postMessage({ type: 'lesson_complete', score: totalScore }, '*');
         
@@ -914,7 +904,6 @@
         document.getElementById('final-score').innerText = `${totalScore}/120`;
     }
 
-    // --- Helpers ---
     function addMessage(sender, text) {
         const div = document.createElement('div');
         div.className = `bubble bubble-${sender}`;
@@ -958,9 +947,7 @@
         scoreDisplay.innerText = `${totalScore} pts`;
     }
 
-    // --- Timer ---
     function startVisualTimer(duration, onComplete) {
-        // Reset state
         if (timerState.reqId) cancelAnimationFrame(timerState.reqId);
         
         timerState.total = duration;
