@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Parler de soi - Leçon 15</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Tone.js for Sound Effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+        :root {
+            --unit: 1vmin; 
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #app-container {
+            background-color: white;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Desktop: 16:9 Ratio */
+        @media (min-width: 1024px) {
+            #app-container {
+                aspect-ratio: 16/9;
+                width: auto;
+                height: 100vh;
+                max-width: 177.78vh;
+                box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            }
+            html { font-size: 2.5vh; } 
+        }
+
+        /* Mobile */
+        @media (max-width: 1023px) {
+            #app-container {
+                width: 100%;
+                height: 100%;
+            }
+            html { font-size: 16px; }
+        }
+
+        /* Typography Fluid Sizing */
+        .text-fluid-xl { font-size: clamp(1.5rem, 5vmin, 4rem); }
+        .text-fluid-lg { font-size: clamp(1.2rem, 3.5vmin, 2.5rem); }
+        .text-fluid-base { font-size: clamp(1rem, 2.5vmin, 1.5rem); }
+        .text-fluid-sm { font-size: clamp(0.875rem, 2vmin, 1.25rem); }
+        .text-fluid-xs { font-size: clamp(0.75rem, 1.8vmin, 1rem); }
+        .icon-fluid-md { font-size: clamp(1.5rem, 4vmin, 3rem); }
+        .icon-fluid-lg { font-size: clamp(2rem, 6vmin, 5rem); }
+
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+        /* --- Layout Structure --- */
+        #page-chat {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            overflow: hidden; 
+        }
+
+        /* Header: Fixed */
+        .chat-header {
+            flex: none; 
+            padding: 1.5vh 2vw;
+            border-bottom: 1px solid #f3f4f6;
+            background-color: white;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        }
+
+        /* Chat Body: Scrollable */
+        #chat-wrapper {
+            flex: 1; 
+            overflow-y: auto; 
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #chat-history {
+            flex: 1;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            padding-bottom: 2rem; 
+        }
+        
+        /* Hide Scrollbar */
+        #chat-history::-webkit-scrollbar { display: none; }
+        #chat-wrapper::-webkit-scrollbar { display: none; }
+        #chat-wrapper { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Footer: Fixed */
+        .control-panel {
+            flex: none; 
+            background: white;
+            border-top: 1px solid #f3f4f6;
+            padding: 2vh 2vw;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5vh;
+            z-index: 20;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
+        }
+
+        /* Bubbles */
+        .bubble {
+            max-width: 80%;
+            padding: 1rem 1.5rem;
+            border-radius: 1.5rem;
+            position: relative;
+            font-size: clamp(1rem, 2.2vmin, 1.25rem);
+            line-height: 1.5;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .bubble-agent {
+            background-color: #f3f4f6;
+            color: #1f2937;
+            border-bottom-left-radius: 0.2rem;
+            align-self: flex-start;
+        }
+        
+        .bubble-user {
+            background-color: #4f46e5;
+            color: white;
+            border-bottom-right-radius: 0.2rem;
+            align-self: flex-end;
+        }
+
+        .bubble-hint {
+            align-self: center;
+            background-color: #fffbeb;
+            color: #b45309;
+            font-size: 0.9rem;
+            border: 1px solid #fcd34d;
+            border-radius: 1rem;
+            padding: 0.5rem 1rem;
+            text-align: center;
+            margin: 0.5rem 0;
+            max-width: 90%;
+        }
+
+        .avatar {
+            width: clamp(2.5rem, 6vmin, 4rem);
+            height: clamp(2.5rem, 6vmin, 4rem);
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #e5e7eb;
+            background: white;
+        }
+        
+        .agent-row {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+
+        /* Mic Button */
+        .mic-btn {
+            width: clamp(4rem, 10vmin, 6rem);
+            height: clamp(4rem, 10vmin, 6rem);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .mic-btn.idle { background-color: #f3f4f6; color: #9ca3af; border: 4px solid #e5e7eb; cursor: not-allowed; }
+        .mic-btn.ready { background-color: white; color: #4f46e5; border: 4px solid #e0e7ff; cursor: pointer; }
+        .mic-btn.ready:hover { border-color: #c7d2fe; transform: scale(1.05); }
+        .mic-btn.recording { background-color: #ef4444; color: white; border: 4px solid #fee2e2; animation: pulse 1.5s infinite; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        /* Timer */
+        .timer-bar-container {
+            width: 100%;
+            max-width: 400px;
+            height: 4px;
+            background-color: #f3f4f6;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .timer-fill {
+            height: 100%;
+            background-color: #ef4444;
+            width: 0%;
+        }
+        
+        .btn-small {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+        }
+        .btn-quit {
+            background-color: #fee2e2;
+            color: #ef4444;
+        }
+        .btn-quit:hover {
+            background-color: #fecaca;
+        }
+        .btn-pause {
+            background-color: #f3f4f6;
+            color: #4b5563;
+        }
+        .btn-pause:hover {
+            background-color: #e5e7eb;
+        }
+        .btn-pause.active {
+            background-color: #fef3c7;
+            color: #d97706;
+            border: 1px solid #fcd34d;
+        }
+
+        /* Paused Overlay */
+        #paused-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(255,255,255,0.6);
+            backdrop-filter: blur(2px);
+            z-index: 40;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        #paused-overlay.visible { display: flex; }
+
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <!-- Paused Overlay -->
+    <div id="paused-overlay">
+        <div class="bg-white px-8 py-6 rounded-2xl shadow-xl text-center border border-gray-100">
+            <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 mx-auto mb-4">
+                <i class="ph-fill ph-pause text-3xl"></i>
+            </div>
+            <h2 class="text-xl font-bold text-gray-800 mb-2">Pause</h2>
+            <p class="text-gray-500 mb-6">L'interview est en pause.</p>
+            <button onclick="togglePause()" class="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition">
+                Reprendre
+            </button>
+        </div>
+    </div>
+
+    <!-- Cover Page -->
+    <div id="page-cover" class="absolute inset-0 bg-white z-30 flex flex-col items-center justify-center p-6 text-center fade-in">
+        <div class="flex flex-col items-center justify-center space-y-[4vh]">
+            <div class="w-[15vh] h-[15vh] bg-indigo-100 rounded-full flex items-center justify-center shadow-inner">
+                <i class="ph-fill ph-chats-circle text-[8vh] text-indigo-600"></i>
+            </div>
+            <h1 class="text-fluid-xl font-bold text-gray-800 leading-tight">한국어로 말하기</h1>
+            <p class="text-fluid-lg text-gray-600 font-medium">Jimin, l'intervieweur coréenne, vous pose des questions.<br>Répondez-y.</p>
+            <button onclick="startLesson()" class="mt-[5vh] px-[4vw] py-[2vh] bg-indigo-600 text-white rounded-full font-bold text-fluid-base shadow-lg hover:bg-indigo-700 transition transform hover:scale-105">
+                C’est parti !
+            </button>
+        </div>
+    </div>
+
+    <!-- Chat Interface -->
+    <div id="page-chat" class="hidden fade-in">
+        <!-- Header: Fixed -->
+        <div class="chat-header">
+            <div class="flex items-center gap-3">
+                 <div class="w-[5vh] h-[5vh] rounded-full overflow-hidden border border-gray-200">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Jimin" alt="Jimin" class="w-full h-full object-cover">
+                </div>
+                <div>
+                    <p class="font-bold text-gray-800 text-fluid-base">Jimin</p>
+                    <p class="text-xs text-gray-400 font-medium">Interview</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <div class="font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg text-fluid-sm border border-indigo-100" id="score-display">
+                    0 pts
+                </div>
+                <button id="btn-pause" onclick="togglePause()" class="btn-small btn-pause w-10 h-10 flex items-center justify-center rounded-full">
+                    <i class="ph-fill ph-pause text-lg"></i>
+                </button>
+                <button onclick="quitLesson()" class="btn-small btn-quit w-10 h-10 flex items-center justify-center rounded-full">
+                    <i class="ph-bold ph-sign-out text-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Chat History: Scrollable -->
+        <div id="chat-wrapper">
+            <div id="chat-history"></div>
+        </div>
+
+        <!-- Control Panel: Fixed -->
+        <div class="control-panel">
+            <p id="status-text" class="text-gray-500 font-medium text-fluid-sm h-6">Écoutez...</p>
+            
+            <button id="btn-mic" class="mic-btn idle" disabled onclick="handleMicClick()">
+                <i id="mic-icon" class="ph-fill ph-microphone text-fluid-lg"></i>
+            </button>
+
+            <div class="timer-bar-container">
+                <div id="timer-fill" class="timer-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Outro Page -->
+    <div id="page-outro" class="absolute inset-0 bg-white z-30 flex flex-col items-center justify-center p-6 text-center hidden fade-in">
+        <div class="flex flex-col items-center justify-center space-y-[4vh]">
+            <div class="w-[15vh] h-[15vh] bg-green-100 rounded-full flex items-center justify-center mb-4 text-green-600 animate-bounce shadow-lg">
+                <i class="ph-fill ph-check-fat icon-fluid-lg text-[8vh]"></i>
+            </div>
+            <h1 class="text-fluid-xl font-bold text-gray-800">Terminé !</h1>
+            
+            <div class="bg-gray-50 p-[4vh] rounded-2xl border border-gray-200 w-full max-w-md">
+                <p class="text-fluid-sm text-gray-400 uppercase tracking-wider font-bold mb-2">Votre Score Final</p>
+                <p id="final-score" class="text-fluid-xl font-bold text-indigo-600">0/120</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Config & Assets ---
+    const BASE_44_ORIGIN = "https://coreeno.base44.app"; 
+    const CLOVA_SPEECH_URL = BASE_44_ORIGIN + '/api/functions/naverClovaSpeech';
+    const CLOVA_STUDIO_URL = BASE_44_ORIGIN + '/api/functions/naverClovaStudio';
+
+    const AUDIO_ASSETS = {
+        GREETING: "https://res.cloudinary.com/de76i94ia/video/upload/v1767417490/C1_S1_bs9ssk.mp3", 
+        Q_NAME: "https://res.cloudinary.com/de76i94ia/video/upload/v1767417505/C1_S2_pcltts.mp3", 
+        Q_JOB: "https://res.cloudinary.com/de76i94ia/video/upload/v1767417518/C1_S3_r5sxxa.mp3", 
+        Q_NATION: "https://res.cloudinary.com/de76i94ia/video/upload/v1767417546/C1_S4_nuzbvk.mp3", 
+        OUTRO: "https://res.cloudinary.com/de76i94ia/video/upload/v1767417548/C1_S5_f1hcw4.mp3", 
+        OUTRO2: "https://res.cloudinary.com/de76i94ia/video/upload/v1767417552/C1_S6_srlv3u.mp3",
+        
+        REACTION_FAIL: "https://res.cloudinary.com/de76i94ia/video/upload/v1767417555/C1_wrong_reaction_zxs6mp.mp3", 
+        TIMEOUT_MOVE_ON: "https://res.cloudinary.com/de76i94ia/video/upload/v1767417480/C1_next_q_ggwvor.mp3",
+
+        FQ_NAME: "https://res.cloudinary.com/de76i94ia/video/upload/v1767417501/C1_S2_forcequit_fyhzp1.mp3", 
+        FQ_NATION: "https://res.cloudinary.com/de76i94ia/video/upload/v1767417530/C1_S4_forcequit_dqrjpl.mp3", 
+        
+        REACT_NAME: "https://res.cloudinary.com/de76i94ia/video/upload/v1767417504/C1_S2_reaction_hitbru.mp3", 
+        REACT_JOB: "https://res.cloudinary.com/de76i94ia/video/upload/v1767417509/C1_S3_reaction_ka3gbf.mp3", 
+        REACT_NATION: "https://res.cloudinary.com/de76i94ia/video/upload/v1767417542/C1_S4_reaction_whywqh.mp3" 
+    };
+
+    const TURNS = [
+        {
+            id: 1, agentAudio: AUDIO_ASSETS.GREETING, agentText: "안녕하세요?",
+            type: "simple_match", expected: ["네 안녕하세요", "안녕하세요", "네"],
+            hint1: "Dites “Bonjour” en coréen.", hint2: "Dites “안녕하세요”",
+            forceQuitAudio: null, successAudio: null
+        },
+        {
+            id: 2, agentAudio: AUDIO_ASSETS.Q_NAME, agentText: "이름이 뭐예요?",
+            type: "ai_eval",
+            aiInstruction: `“이름이 뭐예요?”라는 질문에 대한 답으로 적절한지 확인합니다.\n정답은 “저는 (유저 이름)이에요/예요” 형태여야 합니다. 자음 뒤 “이에요”, 모음 뒤 “예요”를 사용하는 문법 규칙을 어긴 경우 [wrong grammar] 라고 응답합니다.\n정답에는 이름으로 유추되는 단어가 포함되어야 합니다. 단어가 이름이 아닌 특정 의미를 가지는 경우, 질문을 제대로 이해하지 못하는 것으로 간주되는 경우 [wrong vocabulary] 로 응답합니다. 외국어 이름이 사용될 수 있으므로, 유연하게 평가합니다.\nuser input 이 ”저는(생략 가능) [유저 이름]이에요/예요”의 구조를 갖추고 있으며, 문법적으로 정확하고, 본인의 이름을 말하는 것으로 유추되는 경우, [correct] 로 응답합니다.\n응답에는 [wrong grammar] [wrong vocabulary] [correct] 중 1개만 사용할 수 있으며 부연 설명이나 해석 등을 덧붙이지 않습니다.`,
+            hintVocab: "Dites votre prénom en coréen.", hintGrammar: "Dites “저는 (prénom)이에요/예요.”",
+            forceQuitAudio: AUDIO_ASSETS.FQ_NAME, successAudio: AUDIO_ASSETS.REACT_NAME
+        },
+        {
+            id: 3, agentAudio: AUDIO_ASSETS.Q_JOB, agentText: "직업이 뭐예요?",
+            type: "ai_eval",
+            aiInstruction: `“직업이 뭐예요?”라는 질문에 대한 답으로 적절한지 확인한다.\n정답은 “저는 [직업]이에요/예요” 형태여야 한다. 자음 뒤 “이에요”, 모음 뒤 “예요”를 사용하는 문법 규칙을 어긴 경우 [wrong grammar] 라고 응답한다.\n[직업]란에 직업으로 인정할 수 없는 단어를 사용한 경우, 이해할 수 없는 단어를 사용한 경우 [wrong vocabulary] 로 응답한다. 한국어로 충분히 번역이 가능한 단어를 외국어로 음차한 경우 (예. 티처)도 이에 해당한다.\nuser input 이 ”저는(생략 가능) [직업]이에요/예요”의 구조를 갖추고 있으며, 문법적으로 정확하고, 직업을 말하는 경우, [correct] 로 응답한다.\n응답에는 [wrong grammar] [wrong vocabulary] [correct] 중 1개만 사용할 수 있으며 부연 설명이나 해석 등을 덧붙이지 않는다.`,
+            hintVocab: "Dites votre métier en coréen.", hintGrammar: "Dites “저는 [métier]예요/이에요.”",
+            forceQuitAudio: null, successAudio: AUDIO_ASSETS.REACT_JOB
+        },
+        {
+            id: 4, agentAudio: AUDIO_ASSETS.Q_NATION, agentText: "어느 나라 사람이에요?",
+            type: "ai_eval",
+            aiInstruction: `“어느 나라 사람이에요?”라는 질문에 대한 답으로 적절한지 확인한다.\n정답은 “저는 [국가] 사람이에요” 형태여야 한다. 이에 해당하는 문법 규칙을 어긴 경우 [wrong grammar] 라고 응답한다.\n[국가]란에 국가나 지명으로 인정할 수 없는 단어를 사용한 경우, 이해할 수 없는 단어를 사용한 경우 [wrong vocabulary] 로 응답한다. 한자어 국가명을 번역하지 않고 음차한 경우도 이에 해당한다 (예. 아메리카)\nuser input 이 ”저는(생략 가능) [국가] 사람이에요”의 구조를 갖추고 있으며, 문법적으로 정확하고, 국적을 말하는 경우, [correct] 로 응답한다.\n응답에는 [wrong grammar] [wrong vocabulary] [correct] 중 1개만 사용할 수 있으며 부연 설명이나 해석 등을 덧붙이지 않는다.`,
+            hintVocab: "Dites votre nationalité.", hintGrammar: "Dites “저는 [pays]사람 이에요.”",
+            forceQuitAudio: AUDIO_ASSETS.FQ_NATION, successAudio: AUDIO_ASSETS.REACT_NATION
+        },
+        {
+            id: 5, agentAudio: AUDIO_ASSETS.OUTRO, agentText: "수고하셨어요! 오늘 정말 즐거웠어요.",
+            type: "ending"
+        }
+    ];
+
+    // --- State ---
+    let currentTurnIndex = 0;
+    let turnAttempts = 0; 
+    let turnTimeoutCount = 0;
+    let totalScore = 0;
+    
+    let isRecording = false;
+    let canRecord = false;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    
+    // Pause State
+    let isPaused = false;
+    let activeAudio = null;
+    let timerState = {
+        reqId: null,
+        remaining: 0,
+        total: 0,
+        lastTick: 0,
+        callback: null
+    };
+
+    const chatHistory = document.getElementById('chat-history');
+    const statusText = document.getElementById('status-text');
+    const btnMic = document.getElementById('btn-mic');
+    const micIcon = document.getElementById('mic-icon');
+    const timerFill = document.getElementById('timer-fill');
+    const scoreDisplay = document.getElementById('score-display');
+    const chatWrapper = document.getElementById('chat-wrapper');
+    const pausedOverlay = document.getElementById('paused-overlay');
+    const btnPause = document.getElementById('btn-pause');
+
+    async function initAudio() { await Tone.start(); }
+
+    function playAudio(url, onEnd) {
+        if (!url) { if (onEnd) onEnd(); return; }
+        const audio = new Audio(url);
+        activeAudio = audio; 
+        audio.play().catch(e => console.log("Audio play error", e));
+        audio.onended = () => {
+            activeAudio = null;
+            if (onEnd) onEnd();
+        };
+    }
+
+    // --- Pause Logic ---
+    function togglePause() {
+        if (isPaused) resumeGame();
+        else pauseGame();
+    }
+
+    function pauseGame() {
+        isPaused = true;
+        pausedOverlay.classList.add('visible');
+        if (activeAudio) activeAudio.pause();
+        if (timerState.reqId) cancelAnimationFrame(timerState.reqId);
+        btnPause.innerHTML = '<i class="ph-fill ph-play text-lg"></i>';
+        btnPause.classList.add('active');
+    }
+
+    function resumeGame() {
+        isPaused = false;
+        pausedOverlay.classList.remove('visible');
+        if (activeAudio) activeAudio.play();
+        
+        // Timer Resume Fix: Reset lastTick to now so we don't count paused time
+        if (timerState.remaining > 0 && timerState.callback) {
+            timerState.lastTick = performance.now();
+            timerState.reqId = requestAnimationFrame(timerLoop);
+        }
+        
+        btnPause.innerHTML = '<i class="ph-fill ph-pause text-lg"></i>';
+        btnPause.classList.remove('active');
+    }
+
+    // --- Main Logic ---
+    function startLesson() {
+        // Request Mic Permission Early
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                stream.getTracks().forEach(track => track.stop()); // Stop immediately
+                initAudio();
+                document.getElementById('page-cover').classList.add('hidden');
+                document.getElementById('page-chat').classList.remove('hidden');
+                runTurn();
+            })
+            .catch(err => {
+                console.error("Mic error", err);
+                alert("Microphone requis pour cette leçon.");
+            });
+    }
+
+    function quitLesson() {
+        if(isRecording) stopRecording();
+        finishLesson();
+    }
+
+    function runTurn() {
+        const turn = TURNS[currentTurnIndex];
+        turnAttempts = 0;
+        turnTimeoutCount = 0;
+        
+        if (turn.type === 'ending') {
+            addMessage('agent', turn.agentText);
+            playAudio(turn.agentAudio, () => {
+                setTimeout(() => {
+                    addMessage('agent', "안녕히 가세요!");
+                    playAudio(AUDIO_ASSETS.OUTRO2, () => {
+                        finishLesson();
+                    });
+                }, 1000);
+            });
+            disableMic();
+            statusText.innerText = "Fin de l'interview";
+            return;
+        }
+
+        statusText.innerText = "Jimin parle...";
+        disableMic();
+        
+        setTimeout(() => {
+            if (isPaused) return; 
+            addMessage('agent', turn.agentText);
+            playAudio(turn.agentAudio, () => {
+                startUserWindow();
+            });
+        }, 800);
+    }
+
+    function startUserWindow() {
+        canRecord = true;
+        statusText.innerText = "À vous ! (Enregistrement auto)";
+        enableMic();
+        
+        // AUTO RECORDING START
+        handleMicClick();
+    }
+
+    async function handleMicClick() {
+        if (!canRecord) return;
+        if (isPaused) return;
+
+        if (!isRecording) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                mediaRecorder.onstop = processAudio;
+                
+                mediaRecorder.start();
+                isRecording = true;
+                
+                btnMic.classList.remove('ready');
+                btnMic.classList.add('recording');
+                micIcon.classList.remove('ph-microphone');
+                micIcon.classList.add('ph-stop');
+                statusText.innerText = "Enregistrement... (Max 14.5s)";
+                
+                // Restart visual timer for recording duration (max 14.5s)
+                stopVisualTimer(); 
+                startVisualTimer(14500, () => {
+                    if (isRecording) stopRecording();
+                });
+
+            } catch (err) {
+                console.error("Mic error", err);
+                alert("Erreur micro.");
+            }
+        } else {
+            stopRecording();
+        }
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && isRecording) {
+            mediaRecorder.stop();
+            isRecording = false;
+            canRecord = false;
+            
+            btnMic.classList.remove('recording');
+            btnMic.classList.add('idle');
+            micIcon.classList.add('ph-microphone');
+            micIcon.classList.remove('ph-stop');
+            statusText.innerText = "Analyse en cours...";
+            stopVisualTimer();
+        }
+    }
+
+    async function processAudio() {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = async () => {
+            const base64 = reader.result.split(',')[1];
+            try {
+                // STT ONLY (Standard)
+                const sttRes = await fetch(CLOVA_SPEECH_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ audioBase64: base64, languageCode: "Kor" })
+                });
+                const sttData = await sttRes.json();
+                const userText = sttData.text;
+
+                if (!userText) {
+                    handleSttFailure(); 
+                    return;
+                }
+
+                addMessage('user', userText);
+                evaluateAnswer(userText);
+
+            } catch (e) {
+                console.error("API Error", e);
+                handleSttFailure();
+            }
+        };
+    }
+
+    // New Function: STT Failure Logic
+    function handleSttFailure() {
+        turnAttempts++;
+        if (turnAttempts >= 3) {
+             handleMaxAttempts();
+        } else {
+            addHint("잘 못 들었어요. 다시 말해 주세요.");
+            playAudio(AUDIO_ASSETS.REACTION_FAIL);
+            statusText.innerText = "Réessayez...";
+            // Auto restart
+            setTimeout(() => { startUserWindow(); }, 1000);
+        }
+    }
+
+    async function evaluateAnswer(text) {
+        const turn = TURNS[currentTurnIndex];
+
+        // 1. Local Logic (Simple Match)
+        if (turn.type === 'simple_match') {
+            const cleanText = text.replace(/[^\w\sㄱ-ㅎㅏ-ㅣ가-힣]/g, '').trim();
+            const isMatch = turn.expected.some(exp => cleanText.includes(exp.replace(/[^\w\sㄱ-ㅎㅏ-ㅣ가-힣]/g, '')));
+            handleResult(isMatch ? "correct" : "fail");
+            return;
+        } 
+        
+        // 2. Remote Logic (Studio AI) - Chat Completions v3 Structure
+        if (turn.type === 'ai_eval') {
+            try {
+                const aiRes = await fetch(CLOVA_STUDIO_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        userInput: text, // Changed from prompt to userInput
+                        agentInstruction: turn.aiInstruction
+                    })
+                });
+                
+                if(!aiRes.ok) throw new Error("Studio API Error");
+
+                const aiData = await aiRes.json(); 
+                const aiOutput = aiData.result; 
+
+                if (!aiOutput) throw new Error("Empty Studio Result");
+                
+                let resultType = "vocab"; 
+                if (aiOutput.includes("[correct]")) resultType = "correct";
+                else if (aiOutput.includes("[wrong grammar]")) resultType = "grammar";
+                else if (aiOutput.includes("[wrong vocabulary]")) resultType = "vocab";
+                else resultType = "vocab"; 
+                
+                handleResult(resultType);
+
+            } catch (e) {
+                console.warn("AI API Failed", e);
+                handleStudioError();
+            }
+        }
+    }
+
+    function handleStudioError() {
+        addHint("Erreur: veuillez contacter le développeur");
+        turnAttempts++;
+        if (turnAttempts >= 3) {
+             handleMaxAttempts();
+        } else {
+             statusText.innerText = "Erreur API. Réessayez.";
+             setTimeout(() => { startUserWindow(); }, 1500);
+        }
+    }
+
+    function handleResult(type) {
+        const turn = TURNS[currentTurnIndex];
+
+        if (type === "correct") {
+            let points = 0;
+            if (turnAttempts === 0) points = 30;
+            else if (turnAttempts === 1) points = 20;
+            else if (turnAttempts === 2) points = 10;
+            
+            updateScore(points);
+            
+            if (turn.successAudio) {
+                playAudio(turn.successAudio, nextTurn);
+            } else {
+                nextTurn();
+            }
+
+        } else {
+            turnAttempts++;
+            if (turnAttempts >= 3) {
+                handleMaxAttempts();
+            } else {
+                let hintMsg = "";
+                if (turn.type === 'simple_match') {
+                    hintMsg = (turnAttempts === 1) ? turn.hint1 : turn.hint2;
+                } else {
+                    if (type === 'grammar') hintMsg = turn.hintGrammar;
+                    else hintMsg = turn.hintVocab || turn.hint1; 
+                }
+
+                playAudio(AUDIO_ASSETS.REACTION_FAIL);
+                addHint(hintMsg);
+                statusText.innerText = "Réessayez...";
+                setTimeout(() => { startUserWindow(); }, 1000);
+            }
+        }
+    }
+
+    function handleMaxAttempts() {
+         const turn = TURNS[currentTurnIndex];
+         updateScore(0);
+         if (turn.forceQuitAudio) {
+             playAudio(turn.forceQuitAudio, nextTurn);
+         } else {
+             nextTurn();
+         }
+    }
+
+    function nextTurn() {
+        currentTurnIndex++;
+        if (currentTurnIndex < TURNS.length) {
+            runTurn();
+        } else {
+            finishLesson();
+        }
+    }
+
+    function finishLesson() {
+        window.parent.postMessage({ type: 'lesson_complete', score: totalScore }, '*');
+        document.getElementById('page-chat').classList.add('hidden');
+        document.getElementById('page-outro').classList.remove('hidden');
+        document.getElementById('final-score').innerText = `${totalScore}/120`;
+    }
+
+    // --- Helpers ---
+    function addMessage(sender, text) {
+        const div = document.createElement('div');
+        div.className = `bubble bubble-${sender}`;
+        div.innerText = text;
+        
+        if (sender === 'agent') {
+            const row = document.createElement('div');
+            row.className = 'agent-row';
+            row.innerHTML = `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Jimin" class="w-10 h-10 rounded-full border border-gray-200">`;
+            row.appendChild(div);
+            chatHistory.appendChild(row);
+        } else {
+            chatHistory.appendChild(div);
+        }
+        document.getElementById('chat-wrapper').scrollTop = document.getElementById('chat-wrapper').scrollHeight;
+    }
+
+    function addHint(text) {
+        const div = document.createElement('div');
+        div.className = 'bubble bubble-hint';
+        div.innerText = text;
+        chatHistory.appendChild(div);
+        document.getElementById('chat-wrapper').scrollTop = document.getElementById('chat-wrapper').scrollHeight;
+    }
+
+    function enableMic() {
+        btnMic.disabled = false;
+        btnMic.classList.remove('idle');
+        btnMic.classList.add('ready');
+    }
+
+    function disableMic() {
+        btnMic.disabled = true;
+        btnMic.classList.remove('ready', 'recording');
+        btnMic.classList.add('idle');
+        stopVisualTimer();
+    }
+
+    function updateScore(points) {
+        totalScore += points;
+        scoreDisplay.innerText = `${totalScore} pts`;
+    }
+
+    // --- Timer ---
+    function startVisualTimer(duration, onComplete) {
+        // Reset state
+        if (timerState.reqId) cancelAnimationFrame(timerState.reqId);
+        
+        timerState.total = duration;
+        timerState.remaining = duration;
+        timerState.callback = onComplete;
+        timerState.lastTick = performance.now();
+        
+        timerFill.style.width = '100%'; 
+        timerFill.style.transition = 'none'; 
+        void timerFill.offsetWidth; 
+
+        timerState.reqId = requestAnimationFrame(timerLoop);
+    }
+
+    function timerLoop(now) {
+        if (isPaused) return;
+
+        const delta = now - timerState.lastTick;
+        timerState.lastTick = now;
+
+        timerState.remaining = Math.max(0, timerState.remaining - delta);
+        
+        const pct = (timerState.remaining / timerState.total) * 100;
+        timerFill.style.width = `${pct}%`;
+
+        if (timerState.remaining <= 0) {
+            cancelAnimationFrame(timerState.reqId);
+            timerState.reqId = null;
+            if (timerState.callback) timerState.callback();
+        } else {
+            timerState.reqId = requestAnimationFrame(timerLoop);
+        }
+    }
+
+    function stopVisualTimer() {
+        if (timerState.reqId) cancelAnimationFrame(timerState.reqId);
+        timerState.reqId = null;
+        timerFill.style.width = '0%';
+    }
+
+</script>
+</body>
+</html>
