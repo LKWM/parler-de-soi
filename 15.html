@@ -134,6 +134,8 @@
             gap: 1.5vh;
             z-index: 20;
             box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
+            min-height: 120px; /* Ensure space for Terminer button */
+            justify-content: center;
         }
 
         /* Bubbles */
@@ -294,6 +296,23 @@
             background: linear-gradient(90deg, #60a5fa, #4f46e5);
         }
 
+        .btn-terminer {
+            width: 100%;
+            max-width: 300px;
+            padding: 1rem;
+            background-color: #4f46e5;
+            color: white;
+            font-weight: bold;
+            border-radius: 1rem;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        .btn-terminer:hover {
+            background-color: #4338ca;
+            transform: translateY(-2px);
+        }
+
     </style>
 </head>
 <body>
@@ -381,14 +400,14 @@
         </div>
 
         <!-- Control Panel: Fixed -->
-        <div class="control-panel">
-            <p id="status-text" class="text-gray-500 font-medium text-fluid-sm h-6">Écoutez...</p>
+        <div class="control-panel" id="control-panel-content">
+            <p id="status-text" class="text-gray-500 font-medium text-fluid-sm h-6 text-red-500 mb-1"></p> <!-- Only for errors -->
             
             <button id="btn-mic" class="mic-btn idle" disabled onclick="handleMicClick()">
                 <i id="mic-icon" class="ph-fill ph-microphone text-fluid-lg"></i>
             </button>
 
-            <div class="timer-bar-container">
+            <div class="timer-bar-container mt-4" id="timer-container">
                 <div id="timer-fill" class="timer-fill"></div>
             </div>
         </div>
@@ -414,8 +433,6 @@
     // --- Config & Assets ---
     const BASE_44_ORIGIN = "https://coreeno.base44.app"; 
     const CLOVA_SPEECH_URL = BASE_44_ORIGIN + '/api/functions/naverClovaSpeech';
-    
-    // [중요] 아래 경로가 실제 Base44에 생성한 Function 이름과 일치해야 합니다.
     const CLOVA_STUDIO_URL = "https://coreeno.base44.app/api/apps/69021ec9e4512a451556d88d/functions/ClovaStudio"
 
     const AUDIO_ASSETS = {
@@ -442,7 +459,7 @@
             id: 1, agentAudio: AUDIO_ASSETS.GREETING, agentText: "안녕하세요?",
             type: "simple_match", expected: ["네 안녕하세요", "안녕하세요"],
             hint1: "Dites “Bonjour” en coréen.", hint2: "Dites “안녕하세요”",
-            forceQuitText: "시간이 없어요. 다음 질문으로 넘어갈게요.",
+            forceQuitText: "시간이 없어요. 다음 질문으로 넘어갈게요.<br><span class='text-sm text-gray-500'>(On n'a plus de temps. Passons à la question suivante.)</span>",
             forceQuitAudio: AUDIO_ASSETS.TIMEOUT_MOVE_ON,
             successAudio: null
         },
@@ -450,36 +467,34 @@
             id: 2, agentAudio: AUDIO_ASSETS.Q_NAME, agentText: "이름이 뭐예요?",
             type: "ai_eval",
             aiInstruction: `“이름이 뭐예요?”라는 질문에 대한 답으로 적절한지 확인합니다.\n정답은 “저는 (유저 이름)이에요/예요” 형태여야 합니다. 자음 뒤 “이에요”, 모음 뒤 “예요”를 사용하는 문법 규칙을 어긴 경우 [wrong grammar] 라고 응답합니다.\n정답에는 이름으로 유추되는 단어가 포함되어야 합니다. 단어가 이름이 아닌 특정 의미를 가지는 경우, 질문을 제대로 이해하지 못하는 것으로 간주되는 경우 [wrong vocabulary] 로 응답합니다. 외국어 이름이 사용될 수 있으므로, 유연하게 평가합니다.\nuser input 이 ”저는(생략 가능) [유저 이름]이에요/예요”의 구조를 갖추고 있으며, 문법적으로 정확하고, 본인의 이름을 말하는 것으로 유추되는 경우, [correct] 로 응답합니다.\n응답에는 [wrong grammar] [wrong vocabulary] [correct] 중 1개만 사용할 수 있으며 부연 설명이나 해석 등을 덧붙이지 않습니다.`,
-            hintVocab: "Dites votre prénom en coréen.", hintGrammar: "Dites “저는 (prénom)이에요/예요.”",
+            hintVocab: "Dites votre prénom en coréen.", hintGrammar: "Dites “저는 [prénom]이에요/예요.”",
             successText: "반가워요. 저는 지민이에요.", 
-            forceQuitText: "시간이 없어요. 다음 질문으로 넘어갈게요.", 
+            forceQuitText: "시간이 없어요. 다음 질문으로 넘어갈게요.<br><span class='text-sm text-gray-500'>(On n'a plus de temps. Passons à la question suivante.)</span>",
             forceQuitAudio: AUDIO_ASSETS.TIMEOUT_MOVE_ON, 
             successAudio: AUDIO_ASSETS.REACT_NAME
         },
         {
             id: 3, agentAudio: AUDIO_ASSETS.Q_JOB, agentText: "직업이 뭐예요?",
             type: "ai_eval",
-            // [Updated] Turn 3 Agent Instruction
             aiInstruction: `“직업이 뭐예요?”라는 질문에 대한 답으로 적절한지 확인한다.\n정답은 “저는 [직업]이에요/예요” 형태여야 한다. ‘이다’가 아닌 다른 동사를 사용한 경우, 자음 뒤 “이에요”, 모음 뒤 “예요”를 사용하는 문법 규칙을 어긴 경우 [wrong grammar] 라고 응답한다.\n[직업]란에 직업이 아닌 단어를 말하는 경우 [wrong vocabulary] 로 응답한다. 한국어로 충분히 번역이 가능한 단어를 외국어로 음차한 경우 (예. 티처)도 이에 해당한다.\nuser input 이 ”저는(생략 가능) [직업]이에요/예요”의 구조를 갖추고 있으며, 문법적으로 정확하고, 직업을 말하는 경우, [correct] 로 응답한다.\n응답에는 [wrong grammar] [wrong vocabulary] [correct] 중 1개만 사용할 수 있으며 부연 설명이나 해석 등을 덧붙이지 않는다.`,
             hintVocab: "Dites votre métier en coréen.", hintGrammar: "Dites “저는 [métier]예요/이에요.”",
             successText: "그렇군요. 알려주셔서 감사해요.", 
-            forceQuitText: "시간이 없어요. 다음 질문으로 넘어갈게요.", 
+            forceQuitText: "시간이 없어요. 다음 질문으로 넘어갈게요.<br><span class='text-sm text-gray-500'>(On n'a plus de temps. Passons à la question suivante.)</span>",
             forceQuitAudio: AUDIO_ASSETS.TIMEOUT_MOVE_ON, 
             successAudio: AUDIO_ASSETS.REACT_JOB
         },
         {
             id: 4, agentAudio: AUDIO_ASSETS.Q_NATION, agentText: "어느 나라 사람이에요?",
             type: "ai_eval",
-            // [Updated] Turn 4 Agent Instruction
             aiInstruction: `“어느 나라 사람이에요?”라는 질문에 대한 답으로 적절한지 확인한다.\n정답은 “저는 [국가] 사람이에요” 형태여야 한다. ‘사람’이라는 단어를 사용하지 않거나 동사 ‘이다’를 제대로 활용하지 못하는 경우 [wrong grammar] 라고 응답한다.\n[국가]란에 국가명이 아닌 단어를 사용한 경우 [wrong vocabulary] 로 응답한다. 도시 이름을 말하는 경우, 국가명의 번역이 잘못된 경우도 이에 해당한다.\nuser input 이 ”저는(생략 가능) [국가] 사람이에요”의 구조를 갖추고 있으며, 문법적으로 정확하고, 국적을 말하는 경우, [correct] 로 응답한다.\n응답에는 [wrong grammar] [wrong vocabulary] [correct] 중 1개만 사용할 수 있으며 부연 설명이나 해석 등을 덧붙이지 않는다.`,
-            hintVocab: "Dites votre nationalité.", hintGrammar: "Dites “저는 [pays]사람 이에요.”",
+            hintVocab: "Dites votre nationalité.", hintGrammar: "Dites “저는 [pays] 사람이에요.”",
             successText: "그렇군요! 저는 한국 사람이에요.", 
             forceQuitText: "저는 한국 사람이에요.", 
             forceQuitAudio: AUDIO_ASSETS.FQ_NATION, 
             successAudio: AUDIO_ASSETS.REACT_NATION
         },
         {
-            id: 5, agentAudio: AUDIO_ASSETS.OUTRO, agentText: "수고하셨어요! 오늘 정말 즐거웠어요.",
+            id: 5, agentAudio: AUDIO_ASSETS.OUTRO, agentText: "수고하셨어요! 오늘 정말 즐거웠어요.<br><span class='text-sm text-gray-500'>(Bravo ! C'était très amusant aujourd'hui.)</span>",
             type: "ending"
         }
     ];
@@ -493,6 +508,7 @@
     let isRecording = false;
     let canRecord = false;
     let mediaRecorder = null;
+    let currentStream = null; // Store stream to stop tracks
     let audioChunks = [];
     
     // Pause State
@@ -545,6 +561,7 @@
     const chatWrapper = document.getElementById('chat-wrapper');
     const pausedOverlay = document.getElementById('paused-overlay');
     const btnPause = document.getElementById('btn-pause');
+    const controlPanelContent = document.getElementById('control-panel-content');
 
     function playAudio(url, onEnd) {
         if (!url) { if (onEnd) onEnd(); return; }
@@ -614,6 +631,7 @@
         const turn = TURNS[currentTurnIndex];
         turnAttempts = 0; 
         turnTimeoutCount = 0;
+        statusText.innerText = ""; // Clear status
         
         if (turn.type === 'ending') {
             addMessage('agent', turn.agentText);
@@ -621,16 +639,14 @@
                 setTimeout(() => {
                     addMessage('agent', "안녕히 가세요!");
                     playAudio(AUDIO_ASSETS.OUTRO2, () => {
-                        finishLesson();
+                        endConversation(); // Change to review mode
                     });
                 }, 1000);
             });
             disableMic();
-            statusText.innerText = "Fin de l'interview";
             return;
         }
 
-        statusText.innerText = "Jimin parle...";
         disableMic();
         
         setTimeout(() => {
@@ -644,7 +660,7 @@
 
     function startUserWindow() {
         canRecord = true;
-        statusText.innerText = "À vous ! (Enregistrement auto)";
+        statusText.innerText = ""; // Clear status
         enableMic();
         handleMicClick();
     }
@@ -655,8 +671,9 @@
 
         if (!isRecording) {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
+                // Get stream and store reference
+                currentStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(currentStream);
                 audioChunks = [];
                 mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
                 mediaRecorder.onstop = processAudio;
@@ -668,7 +685,7 @@
                 btnMic.classList.add('recording');
                 micIcon.classList.remove('ph-microphone');
                 micIcon.classList.add('ph-stop');
-                statusText.innerText = "Enregistrement... (Max 14.5s)";
+                statusText.innerText = ""; // No text
                 
                 stopVisualTimer(); 
                 startVisualTimer(14500, () => {
@@ -690,11 +707,17 @@
             isRecording = false;
             canRecord = false;
             
+            // [Fix for Mobile Chrome] Explicitly stop all tracks to release hardware
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+            }
+            
             btnMic.classList.remove('recording');
             btnMic.classList.add('idle');
             micIcon.classList.add('ph-microphone');
             micIcon.classList.remove('ph-stop');
-            statusText.innerText = "Analyse en cours...";
+            statusText.innerText = ""; // No text
             stopVisualTimer();
         }
     }
@@ -734,9 +757,10 @@
         if (turnAttempts >= 3) {
              handleMaxAttempts();
         } else {
-            addHint("잘 못 들었어요. 다시 말해 주세요.");
+            // [Translation Added]
+            addHint("잘 못 들었어요. 다시 말해 주세요.<br><span class='text-sm text-gray-500'>(Je n'ai pas bien entendu. Répétez s'il vous plaît.)</span>");
             playAudio(AUDIO_ASSETS.REACTION_FAIL);
-            statusText.innerText = "Réessayez...";
+            statusText.innerText = "";
             setTimeout(() => { startUserWindow(); }, 1000);
         }
     }
@@ -811,12 +835,12 @@
     }
 
     function handleStudioError(e) {
-        addHint("Veuillez contacter le développeur");
+        // [Exception] Only allow this error message
+        statusText.innerText = "Veuillez contacter le développeur";
         turnAttempts++;
         if (turnAttempts >= 3) {
              handleMaxAttempts();
         } else {
-             statusText.innerText = "Réessayez...";
              setTimeout(() => { startUserWindow(); }, 1500);
         }
     }
@@ -864,7 +888,7 @@
                     });
                 }, 1500); 
                 
-                statusText.innerText = "Écoutez...";
+                statusText.innerText = "";
             }
         }
     }
@@ -873,7 +897,7 @@
          const turn = TURNS[currentTurnIndex];
          updateScore(0);
          
-         const fqText = turn.forceQuitText || "시간이 없어요. 다음 질문으로 넘어갈게요.";
+         const fqText = turn.forceQuitText || "시간이 없어요. 다음 질문으로 넘어갈게요.<br><span class='text-sm text-gray-500'>(On n'a plus de temps. Passons à la question suivante.)</span>";
          addMessage('agent', fqText);
 
          const fqAudio = turn.forceQuitAudio || AUDIO_ASSETS.TIMEOUT_MOVE_ON;
@@ -891,14 +915,24 @@
             playSound('page_turn'); 
             runTurn();
         } else {
-            finishLesson();
+            // Wait for Outro turn logic (it will hit runTurn then 'ending')
+            runTurn();
         }
     }
 
-    function finishLesson() {
+    // New Function: Show Review Mode with Terminer Button
+    function endConversation() {
         playSound('complete');
+        // Replace control panel content with Terminer button
+        controlPanelContent.innerHTML = `
+            <button onclick="finishLesson()" class="btn-terminer text-fluid-base">
+                Terminer <i class="ph-bold ph-check-circle ml-2"></i>
+            </button>
+        `;
+    }
+
+    function finishLesson() {
         window.parent.postMessage({ type: 'lesson_complete', score: totalScore }, '*');
-        
         document.getElementById('page-chat').classList.add('hidden');
         document.getElementById('page-outro').classList.remove('hidden');
         document.getElementById('final-score').innerText = `${totalScore}/120`;
@@ -907,7 +941,7 @@
     function addMessage(sender, text) {
         const div = document.createElement('div');
         div.className = `bubble bubble-${sender}`;
-        div.innerText = text;
+        div.innerHTML = text; // Changed to innerHTML for HTML support
         
         if (sender === 'agent') {
             const row = document.createElement('div');
@@ -924,7 +958,7 @@
     function addHint(text) {
         const div = document.createElement('div');
         div.className = 'bubble bubble-hint';
-        div.innerText = text;
+        div.innerHTML = text; // Changed to innerHTML
         chatHistory.appendChild(div);
         document.getElementById('chat-wrapper').scrollTop = document.getElementById('chat-wrapper').scrollHeight;
     }
