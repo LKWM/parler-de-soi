@@ -508,7 +508,7 @@
     let isRecording = false;
     let canRecord = false;
     let mediaRecorder = null;
-    let currentStream = null; // Store stream to stop tracks
+    let globalStream = null; // [Mobile Fix] Persistent stream reference
     let audioChunks = [];
     
     // Pause State
@@ -563,11 +563,33 @@
     const btnPause = document.getElementById('btn-pause');
     const controlPanelContent = document.getElementById('control-panel-content');
 
+    // [Mobile Fix] Robust Audio Playback
     function playAudio(url, onEnd) {
-        if (!url) { if (onEnd) onEnd(); return; }
+        if (!url) { 
+            if (onEnd) onEnd(); 
+            return; 
+        }
+
+        // Resume context context if suspended (common on mobile)
+        if (Tone.context.state !== 'running') {
+            Tone.context.resume();
+        }
+
         const audio = new Audio(url);
         activeAudio = audio; 
-        audio.play().catch(e => console.log("Audio play error", e));
+        
+        // Handle playback errors (e.g., auto-play policy)
+        const playPromise = audio.play();
+        
+        if (playPromise !== undefined) {
+            playPromise.catch(e => {
+                console.error("Audio play error:", e);
+                // Fail-safe: if audio fails, wait a bit then proceed so UI doesn't freeze
+                activeAudio = null;
+                setTimeout(() => { if(onEnd) onEnd(); }, 2000); 
+            });
+        }
+
         audio.onended = () => {
             activeAudio = null;
             if (onEnd) onEnd();
@@ -608,9 +630,13 @@
         initEffects().then(() => {
             playSound('page_turn'); 
             
+            // [Mobile Fix] Request Mic Once & Keep Stream
             navigator.mediaDevices.getUserMedia({ audio: true })
                 .then(stream => {
-                    stream.getTracks().forEach(track => track.stop()); 
+                    globalStream = stream; // Keep persistent reference
+                    // Initially mute tracks to release hardware focus (for audio playback)
+                    globalStream.getTracks().forEach(track => track.enabled = false);
+
                     document.getElementById('page-cover').classList.add('hidden');
                     document.getElementById('page-chat').classList.remove('hidden');
                     runTurn();
@@ -671,9 +697,18 @@
 
         if (!isRecording) {
             try {
-                // Get stream and store reference
-                currentStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(currentStream);
+                // [Mobile Fix] Reuse global stream
+                let streamToUse = globalStream;
+                if (!streamToUse || !streamToUse.active) {
+                     // Fallback if stream was lost
+                     streamToUse = await navigator.mediaDevices.getUserMedia({ audio: true });
+                     globalStream = streamToUse;
+                }
+
+                // Re-enable tracks
+                streamToUse.getTracks().forEach(track => track.enabled = true);
+
+                mediaRecorder = new MediaRecorder(streamToUse);
                 audioChunks = [];
                 mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
                 mediaRecorder.onstop = processAudio;
@@ -707,10 +742,10 @@
             isRecording = false;
             canRecord = false;
             
-            // [Fix for Mobile Chrome] Explicitly stop all tracks to release hardware
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
-                currentStream = null;
+            // [Mobile Fix] Disable tracks instead of stopping them completely
+            // This keeps permission alive but releases audio focus for playback
+            if (globalStream) {
+                globalStream.getTracks().forEach(track => track.enabled = false);
             }
             
             btnMic.classList.remove('recording');
@@ -757,7 +792,6 @@
         if (turnAttempts >= 3) {
              handleMaxAttempts();
         } else {
-            // [Translation Added]
             addHint("잘 못 들었어요. 다시 말해 주세요.<br><span class='text-sm text-gray-500'>(Je n'ai pas bien entendu. Répétez s'il vous plaît.)</span>");
             playAudio(AUDIO_ASSETS.REACTION_FAIL);
             statusText.innerText = "";
@@ -777,7 +811,6 @@
         
         if (turn.type === 'ai_eval') {
             try {
-                // Construct messages array for Clova API
                 const messages = [
                     {
                         role: 'system',
@@ -798,7 +831,7 @@
                 const aiRes = await fetch(CLOVA_STUDIO_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messages }) // Send messages directly
+                    body: JSON.stringify({ messages }) 
                 });
                 
                 if(!aiRes.ok) {
@@ -835,7 +868,6 @@
     }
 
     function handleStudioError(e) {
-        // [Exception] Only allow this error message
         statusText.innerText = "Veuillez contacter le développeur";
         turnAttempts++;
         if (turnAttempts >= 3) {
@@ -915,15 +947,12 @@
             playSound('page_turn'); 
             runTurn();
         } else {
-            // Wait for Outro turn logic (it will hit runTurn then 'ending')
             runTurn();
         }
     }
 
-    // New Function: Show Review Mode with Terminer Button
     function endConversation() {
         playSound('complete');
-        // Replace control panel content with Terminer button
         controlPanelContent.innerHTML = `
             <button onclick="finishLesson()" class="btn-terminer text-fluid-base">
                 Terminer <i class="ph-bold ph-check-circle ml-2"></i>
@@ -941,7 +970,7 @@
     function addMessage(sender, text) {
         const div = document.createElement('div');
         div.className = `bubble bubble-${sender}`;
-        div.innerHTML = text; // Changed to innerHTML for HTML support
+        div.innerHTML = text; 
         
         if (sender === 'agent') {
             const row = document.createElement('div');
@@ -958,7 +987,7 @@
     function addHint(text) {
         const div = document.createElement('div');
         div.className = 'bubble bubble-hint';
-        div.innerHTML = text; // Changed to innerHTML
+        div.innerHTML = text; 
         chatHistory.appendChild(div);
         document.getElementById('chat-wrapper').scrollTop = document.getElementById('chat-wrapper').scrollHeight;
     }
