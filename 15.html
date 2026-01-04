@@ -513,7 +513,6 @@
     
     // Pause State
     let isPaused = false;
-    let activeAudio = null;
     let timerState = {
         reqId: null,
         remaining: 0,
@@ -522,7 +521,11 @@
         callback: null
     };
 
-    // --- Effects (Audio Context) ---
+    // --- Audio System (Single Player & Context) ---
+    // [Mobile Fix] Use ONE global Audio object for all speech
+    const agentAudioPlayer = new Audio();
+    agentAudioPlayer.playsInline = true; // For iOS
+    
     let audioContextInitialized = false;
     let pageTurnSynth, completionSynth;
 
@@ -544,7 +547,6 @@
 
     function playSound(type) {
         if (!audioContextInitialized) return;
-        
         if (type === 'page_turn') {
             pageTurnSynth.triggerAttackRelease("C2", "8n");
         } else if (type === 'complete') {
@@ -563,37 +565,42 @@
     const btnPause = document.getElementById('btn-pause');
     const controlPanelContent = document.getElementById('control-panel-content');
 
-    // [Mobile Fix] Robust Audio Playback
+    // [Mobile Fix] Robust Audio Playback using Global Player
     function playAudio(url, onEnd) {
         if (!url) { 
             if (onEnd) onEnd(); 
             return; 
         }
 
-        // Resume context context if suspended (common on mobile)
+        // Ensure Tone context is alive
         if (Tone.context.state !== 'running') {
-            Tone.context.resume();
+            Tone.context.resume().catch(e => console.log("AudioContext resume failed", e));
         }
 
-        const audio = new Audio(url);
-        activeAudio = audio; 
+        // Reset and Load
+        agentAudioPlayer.pause();
+        agentAudioPlayer.currentTime = 0;
+        agentAudioPlayer.src = url;
+        agentAudioPlayer.load(); 
         
-        // Handle playback errors (e.g., auto-play policy)
-        const playPromise = audio.play();
+        // Remove previous listener
+        agentAudioPlayer.onended = null;
         
+        const handleEnded = () => {
+            agentAudioPlayer.onended = null; // Cleanup
+            if (onEnd) onEnd();
+        };
+        agentAudioPlayer.onended = handleEnded;
+
+        // Play with safety catch
+        const playPromise = agentAudioPlayer.play();
         if (playPromise !== undefined) {
             playPromise.catch(e => {
                 console.error("Audio play error:", e);
                 // Fail-safe: if audio fails, wait a bit then proceed so UI doesn't freeze
-                activeAudio = null;
-                setTimeout(() => { if(onEnd) onEnd(); }, 2000); 
+                setTimeout(() => { if(onEnd) onEnd(); }, 1000); 
             });
         }
-
-        audio.onended = () => {
-            activeAudio = null;
-            if (onEnd) onEnd();
-        };
     }
 
     // --- Pause Logic ---
@@ -605,7 +612,7 @@
     function pauseGame() {
         isPaused = true;
         pausedOverlay.classList.add('visible');
-        if (activeAudio) activeAudio.pause();
+        agentAudioPlayer.pause(); // Pause global player
         if (timerState.reqId) cancelAnimationFrame(timerState.reqId);
         btnPause.innerHTML = '<i class="ph-fill ph-play text-lg"></i>';
         btnPause.classList.add('active');
@@ -614,7 +621,9 @@
     function resumeGame() {
         isPaused = false;
         pausedOverlay.classList.remove('visible');
-        if (activeAudio) activeAudio.play();
+        if (agentAudioPlayer.src && agentAudioPlayer.paused && agentAudioPlayer.currentTime > 0) {
+             agentAudioPlayer.play().catch(e => console.log("Resume play err", e));
+        }
         
         if (timerState.remaining > 0 && timerState.callback) {
             timerState.lastTick = performance.now();
@@ -628,13 +637,14 @@
     // --- Main Logic ---
     function startLesson() {
         initEffects().then(() => {
+            // [Fix] Removed empty play() call that caused errors
             playSound('page_turn'); 
             
-            // [Mobile Fix] Request Mic Once & Keep Stream
+            // Request Mic
             navigator.mediaDevices.getUserMedia({ audio: true })
                 .then(stream => {
-                    globalStream = stream; // Keep persistent reference
-                    // Initially mute tracks to release hardware focus (for audio playback)
+                    globalStream = stream; 
+                    // Stop initially
                     globalStream.getTracks().forEach(track => track.enabled = false);
 
                     document.getElementById('page-cover').classList.add('hidden');
@@ -697,10 +707,13 @@
 
         if (!isRecording) {
             try {
-                // [Mobile Fix] Reuse global stream
+                // [Mobile Fix] Ensure Audio Context is resumed on click
+                if (Tone.context.state !== 'running') {
+                    Tone.context.resume();
+                }
+
                 let streamToUse = globalStream;
                 if (!streamToUse || !streamToUse.active) {
-                     // Fallback if stream was lost
                      streamToUse = await navigator.mediaDevices.getUserMedia({ audio: true });
                      globalStream = streamToUse;
                 }
@@ -738,15 +751,12 @@
 
     function stopRecording() {
         if (mediaRecorder && isRecording) {
+            // [Mobile Fix] Stop recording AND disable tracks
+            mediaRecorder.stream.getTracks().forEach(track => track.enabled = false);
             mediaRecorder.stop();
+            
             isRecording = false;
             canRecord = false;
-            
-            // [Mobile Fix] Disable tracks instead of stopping them completely
-            // This keeps permission alive but releases audio focus for playback
-            if (globalStream) {
-                globalStream.getTracks().forEach(track => track.enabled = false);
-            }
             
             btnMic.classList.remove('recording');
             btnMic.classList.add('idle');
