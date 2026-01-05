@@ -526,6 +526,7 @@
     }
 
     function renderShadowing(page) {
+        // [FIX] Changed page.displayOriginal to page.displayTranslation
         container.innerHTML = `
             <div class="page-wrapper fade-in">
                 <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
@@ -534,7 +535,7 @@
                         <button onclick="playAudio('${page.audioPrompt}')" class="mb-4 w-[8vh] h-[8vh] bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition shadow-sm mx-auto">
                             <i class="ph ph-speaker-high icon-fluid-md"></i>
                         </button>
-                        <h2 class="text-fluid-lg font-bold text-gray-800">${page.displayOriginal}</h2>
+                        <h2 class="text-fluid-lg font-bold text-gray-800">${page.displayTranslation}</h2>
                         <p class="text-fluid-xl font-bold text-indigo-900 korean-text">${page.displayKorean}</p>
                     </div>
                     <div class="flex flex-col items-center gap-[2vh]">
@@ -550,12 +551,13 @@
     }
 
     function renderSpeakingGap(page) {
+        // [FIX] Changed page.displayOriginal to page.displayTranslation
         container.innerHTML = `
             <div class="page-wrapper fade-in">
                 <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
                     <p class="text-gray-500 font-bold uppercase tracking-widest text-fluid-sm">${page.instruction}</p>
                     <div class="card-box py-[5vh] space-y-[2vh]">
-                        <h2 class="text-fluid-lg font-bold text-gray-800">${page.displayOriginal}</h2>
+                        <h2 class="text-fluid-lg font-bold text-gray-800">${page.displayTranslation}</h2>
                         <p class="text-fluid-xl font-bold text-indigo-900 korean-text">${page.displayKorean}</p>
                     </div>
                     <div class="flex flex-col items-center gap-[2vh]">
