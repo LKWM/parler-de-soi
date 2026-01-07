@@ -311,7 +311,7 @@
         },
         {
             type: 'outro',
-            text: "Félicitation ! Chapitre 4에서 부정 표현을 배워 보세요!",
+            text: "Félicitations ! Apprenez la négation dans le Chapitre 4 !",
             // No audio
         }
     ];
@@ -328,10 +328,18 @@
         if (audioContextInitialized) return;
         try {
             await Tone.start();
+            
+            // Check context state and resume if suspended (Critical for Mobile)
+            if (Tone.context.state !== 'running') {
+                await Tone.context.resume();
+            }
+
             correctSound = new Tone.Synth().toDestination();
             completionSynth = new Tone.PolySynth(Tone.Synth).toDestination();
             pageTurnSynth = new Tone.MembraneSynth({
-                pitchDecay: 0.008, octaves: 1, oscillator: { type: 'sine' },
+                pitchDecay: 0.008,
+                octaves: 1,
+                oscillator: { type: 'sine' },
                 envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
             }).toDestination();
             audioContextInitialized = true;
@@ -340,8 +348,21 @@
         }
     }
 
+    // [New Function] Mobile Start Handler
+    async function startLesson() {
+        await initAudio();
+        playSound('turn');
+        nextPage();
+    }
+
     function playSound(type) {
         if (!audioContextInitialized) return;
+        
+        // Ensure context is running before playing
+        if (Tone.context.state !== 'running') {
+            Tone.context.resume();
+        }
+
         switch (type) {
             case 'correct': correctSound.triggerAttackRelease('C5', '0.1s'); break;
             case 'turn': pageTurnSynth.triggerAttackRelease("C2", "32n"); break;
@@ -479,7 +500,7 @@
                     </div>
                     <h1 class="text-fluid-xl font-bold text-gray-800 leading-tight">${page.title}</h1>
                     <p class="text-fluid-lg text-gray-600 font-medium">${page.subtitle}</p>
-                    <button onclick="nextPage()" class="mt-[5vh] px-[4vw] py-[2vh] bg-indigo-600 text-white rounded-full font-bold text-fluid-base shadow-lg hover:bg-indigo-700 transition transform hover:scale-105">
+                    <button onclick="startLesson()" class="mt-[5vh] px-[4vw] py-[2vh] bg-indigo-600 text-white rounded-full font-bold text-fluid-base shadow-lg hover:bg-indigo-700 transition transform hover:scale-105">
                         ${page.buttonText}
                     </button>
                 </div>
