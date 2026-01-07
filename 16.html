@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Interview coréenne - Junho</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Tone.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+        :root { --unit: 1vmin; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937;
+            margin: 0; padding: 0;
+            width: 100vw; height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
+        }
+
+        #app-container {
+            background-color: white;
+            position: relative;
+            overflow: hidden;
+            display: flex; flex-direction: column;
+            width: 100%; height: 100%;
+        }
+
+        /* Desktop Ratio */
+        @media (min-width: 1024px) {
+            #app-container {
+                aspect-ratio: 16/9; width: auto; height: 100vh;
+                max-width: 177.78vh; box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            }
+            html { font-size: 2.5vh; } 
+        }
+
+        /* Mobile Fullscreen */
+        @media (max-width: 1023px) {
+            #app-container { width: 100%; height: 100%; }
+            html { font-size: 16px; }
+        }
+
+        .text-fluid-xl { font-size: clamp(1.5rem, 5vmin, 4rem); }
+        .text-fluid-lg { font-size: clamp(1.2rem, 3.5vmin, 2.5rem); }
+        .text-fluid-base { font-size: clamp(1rem, 2.5vmin, 1.5rem); }
+        .text-fluid-sm { font-size: clamp(0.875rem, 2vmin, 1.25rem); }
+
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+        /* [Fix] Layout Logic for Visibility Toggle */
+        .page-section {
+            display: flex; 
+            flex-direction: column; 
+            height: 100%; 
+            width: 100%; 
+            overflow: hidden;
+        }
+        
+        /* Tailwind's 'hidden' class needs !important to override display:flex above */
+        .hidden { display: none !important; }
+
+        /* Chat Header */
+        .chat-header {
+            flex: none; padding: 1.5vh 2vw;
+            border-bottom: 1px solid #f3f4f6; background-color: white;
+            z-index: 20; display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        }
+
+        /* [Fix] Chat Scroll Area */
+        #chat-wrapper {
+            flex: 1; 
+            overflow-y: auto; 
+            width: 100%; 
+            max-width: 900px; 
+            margin: 0 auto;
+            position: relative; 
+            display: flex; 
+            flex-direction: column;
+            /* Important for scrolling to work inside flex */
+            min-height: 0; 
+        }
+        
+        #chat-history {
+            padding: 2rem; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 1.5rem; 
+            padding-bottom: 2rem;
+            /* Allow content to grow */
+            flex-grow: 1; 
+        }
+        
+        #chat-history::-webkit-scrollbar { display: none; }
+        #chat-wrapper::-webkit-scrollbar { display: none; }
+        #chat-wrapper { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Footer Control Panel */
+        .control-panel {
+            flex: none; background: white; border-top: 1px solid #f3f4f6;
+            padding: 2vh 2vw; display: flex; flex-direction: column; align-items: center;
+            gap: 1.5vh; z-index: 20; box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
+            min-height: 140px; justify-content: center;
+        }
+
+        /* Bubbles */
+        .bubble {
+            max-width: 80%; padding: 1rem 1.5rem; border-radius: 1.5rem;
+            position: relative; font-size: clamp(1rem, 2.2vmin, 1.25rem); line-height: 1.5;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .bubble-agent { background-color: #f3f4f6; color: #1f2937; border-bottom-left-radius: 0.2rem; align-self: flex-start; }
+        .bubble-user { background-color: #4f46e5; color: white; border-bottom-right-radius: 0.2rem; align-self: flex-end; }
+        .bubble-hint {
+            align-self: center; background-color: #fffbeb; color: #b45309;
+            font-size: 0.9rem; border: 1px solid #fcd34d; border-radius: 1rem;
+            padding: 0.5rem 1rem; text-align: center; margin: 0.5rem 0; max-width: 90%;
+        }
+
+        .avatar {
+            width: clamp(2.5rem, 6vmin, 4rem); height: clamp(2.5rem, 6vmin, 4rem);
+            border-radius: 50%; object-fit: cover; border: 2px solid #e5e7eb; background: white;
+        }
+        .agent-row { display: flex; gap: 1rem; align-items: flex-end; }
+
+        /* Mic Button */
+        .mic-btn {
+            width: clamp(4rem, 10vmin, 6rem); height: clamp(4rem, 10vmin, 6rem);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .mic-btn.idle { background-color: #f3f4f6; color: #9ca3af; border: 4px solid #e5e7eb; cursor: not-allowed; }
+        .mic-btn.ready { background-color: white; color: #4f46e5; border: 4px solid #e0e7ff; cursor: pointer; }
+        .mic-btn.ready:hover { border-color: #c7d2fe; transform: scale(1.05); }
+        .mic-btn.recording { background-color: #ef4444; color: white; border: 4px solid #fee2e2; animation: pulse 1.5s infinite; }
+
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .timer-bar-container { width: 100%; max-width: 400px; height: 4px; background-color: #f3f4f6; border-radius: 2px; overflow: hidden; }
+        .timer-fill { height: 100%; background-color: #ef4444; width: 0%; }
+
+        .btn-small { padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.25rem; }
+        .btn-quit { background-color: #fee2e2; color: #ef4444; }
+        .btn-quit:hover { background-color: #fecaca; }
+        .btn-pause { background-color: #f3f4f6; color: #4b5563; }
+        .btn-pause:hover { background-color: #e5e7eb; }
+        .btn-pause.active { background-color: #fef3c7; color: #d97706; border: 1px solid #fcd34d; }
+        
+        .btn-terminer {
+            width: 100%; max-width: 300px; padding: 1rem; background-color: #4f46e5;
+            color: white; font-weight: bold; border-radius: 1rem; text-align: center;
+            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3); transition: transform 0.2s, background-color 0.2s;
+        }
+        .btn-terminer:hover { background-color: #4338ca; transform: translateY(-2px); }
+
+        /* Quiz Styles */
+        .quiz-option {
+            width: 100%; padding: 1rem; background-color: white; border: 2px solid #e5e7eb;
+            border-radius: 1rem; margin-bottom: 0.75rem; text-align: left; font-weight: 500;
+            color: #374151; transition: all 0.2s;
+        }
+        .quiz-option:hover { border-color: #a5b4fc; background-color: #eef2ff; }
+        .quiz-option.selected { border-color: #4f46e5; background-color: #e0e7ff; color: #4338ca; }
+
+        /* Paused Overlay */
+        #paused-overlay {
+            position: absolute; inset: 0; background: rgba(255,255,255,0.6); backdrop-filter: blur(2px);
+            z-index: 40; display: none; align-items: center; justify-content: center;
+        }
+        #paused-overlay.visible { display: flex; }
+        
+        /* Mission Card */
+        .mission-card {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
+            border: 1px solid #bfdbfe; border-radius: 1.5rem; padding: 2rem;
+            position: relative; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .mission-card::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, #60a5fa, #4f46e5); }
+
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <!-- Paused Overlay -->
+    <div id="paused-overlay">
+        <div class="bg-white px-8 py-6 rounded-2xl shadow-xl text-center border border-gray-100">
+            <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 mx-auto mb-4">
+                <i class="ph-fill ph-pause text-3xl"></i>
+            </div>
+            <h2 class="text-xl font-bold text-gray-800 mb-2">Pause</h2>
+            <p class="text-gray-500 mb-6">L'interview est en pause.</p>
+            <button onclick="togglePause()" class="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition">
+                Reprendre
+            </button>
+        </div>
+    </div>
+
+    <!-- Cover Page -->
+    <div id="page-cover" class="page-section absolute inset-0 bg-white z-30 flex flex-col items-center justify-center p-6 text-center fade-in">
+        <div class="flex flex-col items-center justify-center space-y-[4vh] max-w-lg w-full">
+            <div class="w-[15vh] h-[15vh] bg-indigo-100 rounded-full flex items-center justify-center shadow-inner mb-2">
+                <i class="ph-fill ph-chats-circle text-[8vh] text-indigo-600"></i>
+            </div>
+            <h1 class="text-fluid-xl font-bold text-gray-800 leading-tight">한국어로 말하기</h1>
+            
+            <div class="mission-card w-full text-left">
+                <div class="flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-target text-indigo-600 text-xl"></i>
+                    <h3 class="font-bold text-indigo-900 text-lg uppercase tracking-wide">Mission</h3>
+                </div>
+                <p class="text-gray-700 font-medium leading-relaxed text-fluid-sm mb-3">
+                    Vous êtes un intervieweur et vous devez interroger une personne.
+                </p>
+                <ul class="space-y-2 text-fluid-sm text-gray-600">
+                    <li class="flex items-start gap-2">
+                        <i class="ph-bold ph-check-circle text-indigo-500 mt-0.5"></i>
+                        <span>Demandez son <strong>nom</strong>, son <strong>métier</strong> et sa <strong>nationalité</strong>.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="ph-bold ph-check-circle text-indigo-500 mt-0.5"></i>
+                        <span>Vous avez <strong>3 essais</strong> par question.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="ph-bold ph-check-circle text-indigo-500 mt-0.5"></i>
+                        <span>Utilisez les expressions des leçons 1 à 14.</span>
+                    </li>
+                </ul>
+            </div>
+
+            <button onclick="startLesson()" class="mt-[2vh] px-[6vw] py-[2vh] bg-indigo-600 text-white rounded-full font-bold text-fluid-base shadow-lg hover:bg-indigo-700 transition transform hover:scale-105 active:scale-95">
+                C’est parti !
+            </button>
+        </div>
+    </div>
+
+    <!-- Chat Interface -->
+    <div id="page-chat" class="page-section hidden fade-in">
+        <!-- Header -->
+        <div class="chat-header">
+            <div class="flex items-center gap-3">
+                 <div class="w-[5vh] h-[5vh] rounded-full overflow-hidden border border-gray-200">
+                    <!-- Updated Avatar (Chase) -->
+                    <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=Chase" alt="Junho" class="w-full h-full object-cover">
+                </div>
+                <div>
+                    <p class="font-bold text-gray-800 text-fluid-base">Junho</p>
+                    <p class="text-xs text-gray-400 font-medium">Interview</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <div class="font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg text-fluid-sm border border-indigo-100" id="score-display">
+                    0 pts
+                </div>
+                <button id="btn-pause" onclick="togglePause()" class="btn-small btn-pause w-10 h-10 flex items-center justify-center rounded-full">
+                    <i class="ph-fill ph-pause text-lg"></i>
+                </button>
+                <button onclick="quitLesson()" class="btn-small btn-quit w-10 h-10 flex items-center justify-center rounded-full">
+                    <i class="ph-bold ph-sign-out text-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Chat Body -->
+        <div id="chat-wrapper">
+            <div id="chat-history"></div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel" id="control-panel-content">
+            <p id="status-text" class="text-gray-500 font-medium text-fluid-sm h-6 text-red-500 mb-1"></p> 
+            
+            <button id="btn-mic" class="mic-btn idle" disabled onclick="handleMicClick()">
+                <i id="mic-icon" class="ph-fill ph-microphone text-fluid-lg"></i>
+            </button>
+
+            <div class="timer-bar-container mt-4" id="timer-container">
+                <div id="timer-fill" class="timer-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quiz Interface (Separate Page) -->
+    <div id="page-quiz" class="page-section hidden fade-in bg-gray-50">
+        <div class="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-lg mx-auto w-full">
+            <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-6 text-indigo-600">
+                <i class="ph-fill ph-question text-3xl"></i>
+            </div>
+            <h2 class="text-xl font-bold text-gray-800 mb-6">Quiz Rapide</h2>
+            
+            <div id="quiz-question-container" class="w-full">
+                <p id="quiz-question" class="text-lg font-medium text-gray-700 mb-6"></p>
+                <div id="quiz-options" class="flex flex-col gap-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Outro Page -->
+    <div id="page-outro" class="page-section absolute inset-0 bg-white z-30 flex flex-col items-center justify-center p-6 text-center hidden fade-in">
+        <div class="flex flex-col items-center justify-center space-y-[4vh]">
+            <div class="w-[15vh] h-[15vh] bg-green-100 rounded-full flex items-center justify-center mb-4 text-green-600 animate-bounce shadow-lg">
+                <i class="ph-fill ph-check-fat icon-fluid-lg text-[8vh]"></i>
+            </div>
+            <h1 class="text-fluid-xl font-bold text-gray-800">Bravo !</h1>
+            <p class="text-gray-600">수고하셨습니다!<br>대화가 모두 종료되었습니다.</p>
+            
+            <div class="bg-gray-50 p-[4vh] rounded-2xl border border-gray-200 w-full max-w-md mt-4">
+                <p class="text-fluid-sm text-gray-400 uppercase tracking-wider font-bold mb-2">Score Final</p>
+                <p id="final-score" class="text-fluid-xl font-bold text-indigo-600">0/180</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Configuration ---
+    const BASE_44_ORIGIN = "https://coreeno.base44.app"; 
+    const CLOVA_SPEECH_URL = BASE_44_ORIGIN + '/api/functions/naverClovaSpeech';
+    const CLOVA_STUDIO_URL = "https://coreeno.base44.app/api/apps/69021ec9e4512a451556d88d/functions/ClovaStudio"
+
+    const AUDIO_ASSETS = {
+        AGENT_HELLO: "https://res.cloudinary.com/de76i94ia/video/upload/v1767632992/Agent_1_xugd2x.mp3",
+        CORRECT_1: "https://res.cloudinary.com/de76i94ia/video/upload/v1767633008/turn1_correct_ibnnsh.mp3",
+        CORRECT_2: "https://res.cloudinary.com/de76i94ia/video/upload/v1767632993/turn2_correct_yhpwek.mp3",
+        CORRECT_3: "https://res.cloudinary.com/de76i94ia/video/upload/v1767633003/turn3_correct_nscu90.mp3",
+        CORRECT_4: "https://res.cloudinary.com/de76i94ia/video/upload/v1767633000/turn4_correct_uduqoo.mp3",
+        FINAL: "https://res.cloudinary.com/de76i94ia/video/upload/v1767632998/final_atpdg7.mp3",
+        RECOG_FAIL: "https://res.cloudinary.com/de76i94ia/video/upload/v1767633006/recognition_fail_dsmkt8.mp3",
+        TIMEOUT_MOVE_ON: "https://res.cloudinary.com/de76i94ia/video/upload/v1767707691/forcequit_ao7vfw.mp3",
+
+        FQ_NAME: "https://res.cloudinary.com/de76i94ia/video/upload/v1767417501/C1_S2_forcequit_fyhzp1.mp3", 
+        FQ_NATION: "https://res.cloudinary.com/de76i94ia/video/upload/v1767417530/C1_S4_forcequit_dqrjpl.mp3", 
+        
+        REACT_NAME: "https://res.cloudinary.com/de76i94ia/video/upload/v1767417504/C1_S2_reaction_hitbru.mp3", 
+        REACT_JOB: "https://res.cloudinary.com/de76i94ia/video/upload/v1767417509/C1_S3_reaction_ka3gbf.mp3", 
+        REACT_NATION: "https://res.cloudinary.com/de76i94ia/video/upload/v1767417542/C1_S4_reaction_whywqh.mp3" 
+    };
+
+    const TURNS = [
+        {
+            id: 1, 
+            agentAudio: AUDIO_ASSETS.AGENT_HELLO, 
+            agentText: "안녕하세요?",
+            // [Fix] Changed to ai_eval
+            type: "ai_eval", 
+            // [Fix] Added missing aiInstruction
+            aiInstruction: `[correct], [wrong politeness], [wrong situation], [wrong answer] 중 한 개를 선택하시오. 이외 부연 설명이나 질문은 절대 금지합니다.\n면접을 시작하는 상황에서, 유저가 “안녕하세요”에 대해 적절히 격식체로 응답하는지 평가합니다.\n답이 적절하다면 [correct] 라고 답하세요.\n반말로 응답하는 경우, [wrong politeness] 라고 답하세요.\n처음 만나는 사람에게 하는 인삿말이 아닌 경우, [wrong situation] 라고 답하세요.\n이외 다른 이유로 유저 발화가 적절하지 않다고 평가되면 모두 [wrong answer] 라고 답하세요.`,
+            hintPolite: "지금은 면접 중이에요. 존댓말로 대답하세요.<br><span class='text-sm text-gray-500'>(Vous êtes dans un entretien. Veuillez parler poliment.)</span>",
+            hintSit: "지금은 면접 중이에요. 인사에 대답해 보세요.<br><span class='text-sm text-gray-500'>(Vous êtes dans un entretien. Veuillez répondre à la salutation.)</span>",
+            hintWrong: "다시 대답해 보세요.<br><span class='text-sm text-gray-500'>(Réessayez.)</span>",
+            successText: "네, 반갑습니다.",
+            successAudio: AUDIO_ASSETS.CORRECT_1,
+            // [Fix] Updated forceQuitText
+            forceQuitText: "시간이 없어요. 다음으로 넘어갈게요.<br><span class='text-sm text-gray-500'>(On n'a plus de temps. Passons à la suivante.)</span>",
+            forceQuitAudio: AUDIO_ASSETS.TIMEOUT_MOVE_ON
+        },
+        {
+            id: 2, 
+            agentText: "...",
+            mission: "Demander son prénom",
+            type: "ai_eval",
+            aiInstruction: `[correct], [wrong politeness], [wrong question], [wrong answer] 중 한 개를 선택하시오. 이외 부연 설명이나 질문은 절대 금지합니다.\n유저가 상대방의 이름을 묻는 질문을 적절히 구성하는지 평가합니다. “이름이 뭐예요?” 라고 말하거나 이외 다른 비슷한 방식으로 상대방의 이름을 물어보는 경우, [Correct] 로 응답합니다.\n반말로 질문하는 경우, [wrong politeness] 라고 답하세요.\n이름이 아닌 다른 것에 대해 묻거나 말하는 경우, [wrong question] 라고 응답하세요.\n이외 다른 이유로 유저 발화가 적절하지 않다고 평가되면 모두 [wrong answer] 라고 답하세요.`,
+            hintPolite: "지금은 면접 중이에요. 존댓말로 말하세요.<br><span class='text-sm text-gray-500'>(Vous êtes dans un entretien. Veuillez parler poliment.)</span>",
+            hintWrong: "지금은 면접 중이에요. 상대방의 이름을 물어보세요.<br><span class='text-sm text-gray-500'>(Vous êtes dans un entretien. Veuillez demander le prénom de votre interlocuteur.)</span>",
+            successText: "저는 준호예요.",
+            successAudio: AUDIO_ASSETS.CORRECT_2,
+            forceQuitText: "시간이 없어요. 다음으로 넘어갈게요.<br><span class='text-sm text-gray-500'>(On n'a plus de temps. Passons à la suivante.)</span>",
+            forceQuitAudio: AUDIO_ASSETS.TIMEOUT_MOVE_ON
+        },
+        {
+            id: 3, 
+            agentText: "...",
+            mission: "Demander son métier",
+            type: "ai_eval",
+            aiInstruction: `[correct], [wrong politeness], [wrong question], [wrong answer] 중 한 개를 선택하시오. 이외 부연 설명이나 질문은 절대 금지합니다.\n유저가 상대방의 직업을 묻는 질문을 적절히 구성하는지 평가합니다. “직업이 뭐예요?” 라고 말하거나 이외 다른 비슷한 방식으로 상대방의 직업을 물어보는 경우, [Correct] 로 응답합니다.\n반말로 질문하는 경우, [wrong politeness] 라고 답하세요.\n직업이 아닌 다른 것에 대해 묻거나 말하는 경우, [wrong question] 라고 응답하세요.\n이외 다른 이유로 유저 발화가 적절하지 않다고 평가되면 모두 [wrong answer] 라고 답하세요.`,
+            hintPolite: "지금은 면접 중이에요. 존댓말로 말하세요.<br><span class='text-sm text-gray-500'>(Vous êtes dans un entretien. Veuillez parler poliment.)</span>",
+            hintWrong: "상대방의 직업을 물어보세요.<br><span class='text-sm text-gray-500'>(Veuillez demander le métier de votre interlocuteur.)</span>",
+            successText: "저는 회사원이에요.",
+            successAudio: AUDIO_ASSETS.CORRECT_3,
+            forceQuitText: "시간이 없어요. 다음으로 넘어갈게요.<br><span class='text-sm text-gray-500'>(On n'a plus de temps. Passons à la suivante.)</span>",
+            forceQuitAudio: AUDIO_ASSETS.TIMEOUT_MOVE_ON
+        },
+        {
+            id: 4, 
+            agentText: "...",
+            mission: "Demander sa nationalité",
+            type: "ai_eval",
+            aiInstruction: `[correct], [wrong politeness], [wrong question], [wrong answer] 중 한 개를 선택하시오. 이외 부연 설명이나 질문은 절대 금지합니다.\n유저가 상대방의 출신이나 국적을 묻는 질문을 적절히 구성하는지 평가합니다. “어느 나라 사람이에요?”, “어디에서 왔어요?” 등 적절한 방식으로 상대방의 출신이나 국적 물어보는 경우, [Correct] 로 응답합니다.\n반말로 질문하는 경우, [wrong politeness] 라고 답하세요.\n국적/출신이 아닌 다른 것에 대해 묻거나 말하는 경우, [wrong question] 라고 응답하세요.\n이외 다른 이유로 유저 발화가 적절하지 않다고 평가되면 모두 [wrong answer] 라고 답하세요.`,
+            hintPolite: "지금은 면접 중이에요. 존댓말로 말하세요.<br><span class='text-sm text-gray-500'>(Vous êtes dans un entretien. Veuillez parler poliment.)</span>",
+            hintWrong: "상대방의 국적을 물어보세요.<br><span class='text-sm text-gray-500'>(Veuillez demander la nationalité de votre interlocuteur.)</span>",
+            successText: "저는 벨기에 사람이에요.",
+            successAudio: AUDIO_ASSETS.CORRECT_4,
+            forceQuitText: "시간이 없어요. 다음으로 넘어갈게요.<br><span class='text-sm text-gray-500'>(On n'a plus de temps. Passons à la suivante.)</span>",
+            forceQuitAudio: AUDIO_ASSETS.TIMEOUT_MOVE_ON
+        },
+        {
+            id: 5, 
+            agentAudio: AUDIO_ASSETS.FINAL, 
+            agentText: "오늘 정말 즐거웠어요. 다음에 또 만나요!",
+            type: "ai_eval",
+            aiInstruction: `[correct], [wrong politeness], [wrong answer] 중 한 개를 선택하시오. 이외 부연 설명이나 질문은 절대 금지합니다.\n유저의 발화가 “오늘 정말 즐거웠어요. 다음에 또 만나요!”라는 대사에 대한 응답으로 적절한지 평가합니다. “다음에 또 만나요”를 반복하는 경우, “안녕히 가세요”, “감사합니다” 등으로 대답하는 경우 [correct] 에 해당합니다.\n유저가 반말로 대답하는 경우, [wrong politeness] 라고 답하세요.\n상황상 적절하지 않은 발화, 문법상의 오류는 모두 [wrong answer] 로 평가합니다.`,
+            hintPolite: "지금은 면접 중이에요. 존댓말로 말하세요.<br><span class='text-sm text-gray-500'>(Vous êtes dans un entretien. Veuillez parler poliment.)</span>",
+            hintWrong: "대화가 끝났어요. 상대방에게 인사해 보세요.<br><span class='text-sm text-gray-500'>(L’entretien est terminé. Veuillez dire “au revoir”.)</span>",
+            successText: null, 
+            successAudio: null,
+            forceQuitText: "대화가 종료되었습니다.<br><span class='text-sm text-gray-500'>(Conversation terminée.)</span>",
+            forceQuitAudio: AUDIO_ASSETS.TIMEOUT_MOVE_ON
+        }
+    ];
+
+    const QUIZZES = [
+        { q: "Quel est le prénom de votre interlocuteur ?", options: ["Jinsu", "Junho", "Jimin", "John", "Je ne sais pas"], correct: 1 },
+        { q: "Quel est le métier de votre interlocuteur ?", options: ["Enseignant", "Employé", "Ingénieur", "Étudiant", "Je ne sais pas"], correct: 1 },
+        { q: "Quel est la nationalité de votre interlocuteur ?", options: ["Coréenne", "Française", "Belge", "Espagnole", "Je ne sais pas"], correct: 2 }
+    ];
+
+    // --- State & Variables ---
+    let currentTurnIndex = 0;
+    let turnAttempts = 0; 
+    let totalScore = 0;
+    
+    let isRecording = false;
+    let canRecord = false;
+    let mediaRecorder = null;
+    let globalStream = null; 
+    let audioChunks = [];
+    
+    let currentQuizIndex = 0;
+    let isPaused = false;
+    let timerState = { reqId: null, remaining: 0, total: 0, lastTick: 0, callback: null };
+
+    // --- Audio System (Robust for Mobile) ---
+    const agentAudioPlayer = new Audio();
+    agentAudioPlayer.playsInline = true;
+    
+    let audioContextInitialized = false;
+    let pageTurnSynth, completionSynth;
+
+    async function initEffects() {
+        if (audioContextInitialized) return;
+        await Tone.start();
+        pageTurnSynth = new Tone.MembraneSynth({ pitchDecay: 0.008, octaves: 1, oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination();
+        completionSynth = new Tone.PolySynth(Tone.Synth).toDestination();
+        audioContextInitialized = true;
+    }
+
+    function playSound(type) {
+        if (!audioContextInitialized) return;
+        if (type === 'page_turn') pageTurnSynth.triggerAttackRelease("C2", "8n");
+        else if (type === 'complete') completionSynth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "4n");
+    }
+
+    const chatHistory = document.getElementById('chat-history');
+    const statusText = document.getElementById('status-text');
+    const btnMic = document.getElementById('btn-mic');
+    const micIcon = document.getElementById('mic-icon');
+    const timerFill = document.getElementById('timer-fill');
+    const scoreDisplay = document.getElementById('score-display');
+    const chatWrapper = document.getElementById('chat-wrapper');
+    const pausedOverlay = document.getElementById('paused-overlay');
+    const btnPause = document.getElementById('btn-pause');
+    const controlPanelContent = document.getElementById('control-panel-content');
+    const pageChat = document.getElementById('page-chat');
+    const pageQuiz = document.getElementById('page-quiz');
+
+    // Robust Audio Playback
+    function playAudio(url, onEnd) {
+        if (!url) { if (onEnd) onEnd(); return; }
+        
+        if (Tone.context.state !== 'running') Tone.context.resume().catch(e=>{});
+
+        agentAudioPlayer.pause();
+        agentAudioPlayer.currentTime = 0;
+        agentAudioPlayer.src = url;
+        agentAudioPlayer.load(); // Force load
+        
+        agentAudioPlayer.onended = null;
+        const handleEnded = () => {
+            agentAudioPlayer.onended = null;
+            if (onEnd) onEnd();
+        };
+        agentAudioPlayer.onended = handleEnded;
+
+        const playPromise = agentAudioPlayer.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(e => {
+                console.error("Audio error:", e);
+                setTimeout(() => { if(onEnd) onEnd(); }, 1500); 
+            });
+        }
+    }
+
+    // --- Main Logic ---
+    function startLesson() {
+        initEffects().then(() => {
+            playSound('page_turn');
+            navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                globalStream = stream;
+                globalStream.getTracks().forEach(track => track.enabled = false); // Stop holding mic
+                document.getElementById('page-cover').classList.add('hidden');
+                document.getElementById('page-chat').classList.remove('hidden');
+                runTurn();
+            }).catch(err => {
+                console.error("Mic error", err);
+                alert("Accès microphone requis.");
+            });
+        });
+    }
+
+    function runTurn() {
+        const turn = TURNS[currentTurnIndex];
+        turnAttempts = 0; 
+        statusText.innerText = "";
+        
+        if (turn.mission) {
+            addHint(`<i class="ph-bold ph-target text-indigo-600"></i>&nbsp;Mission: ${turn.mission}`);
+        }
+
+        // Logic: if there's agent audio (Turn 1, 5), play it first.
+        // If not (Turn 2,3,4), wait for user.
+        if (turn.agentAudio) {
+            addMessage('agent', turn.agentText);
+            playAudio(turn.agentAudio, () => {
+                // Safety Delay
+                setTimeout(() => startUserWindow(), 500);
+            });
+        } else {
+            // Safety Delay
+            setTimeout(() => startUserWindow(), 500);
+        }
+        disableMic();
+    }
+
+    function startUserWindow() {
+        canRecord = true;
+        enableMic();
+        handleMicClick(); // Auto-start recording
+    }
+
+    async function handleMicClick() {
+        if (!canRecord || isPaused) return;
+
+        if (!isRecording) {
+            try {
+                if (Tone.context.state !== 'running') {
+                    Tone.context.resume().catch(() => {});
+                }
+
+                // Re-enable global stream tracks
+                let streamToUse = globalStream;
+                if(!streamToUse || !streamToUse.active) {
+                    streamToUse = await navigator.mediaDevices.getUserMedia({audio:true});
+                    globalStream = streamToUse;
+                }
+                streamToUse.getTracks().forEach(t => t.enabled = true);
+
+                mediaRecorder = new MediaRecorder(streamToUse);
+                audioChunks = [];
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                mediaRecorder.onstop = processAudio;
+                
+                mediaRecorder.start();
+                isRecording = true;
+                
+                btnMic.classList.remove('ready'); btnMic.classList.add('recording');
+                micIcon.classList.remove('ph-microphone'); micIcon.classList.add('ph-stop');
+                
+                stopVisualTimer();
+                startVisualTimer(14500, () => { if(isRecording) stopRecording(); });
+
+            } catch (err) { 
+                console.error("Rec error", err);
+                // Recovery from error (e.g., mobile restriction)
+                isRecording = false;
+                enableMic();
+                statusText.innerText = "Appuyez pour parler";
+            }
+        } else {
+            stopRecording();
+        }
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && isRecording) {
+            mediaRecorder.stream.getTracks().forEach(t => t.enabled = false);
+            mediaRecorder.stop();
+            isRecording = false; canRecord = false;
+            
+            btnMic.classList.remove('recording'); btnMic.classList.add('idle');
+            micIcon.classList.add('ph-microphone'); micIcon.classList.remove('ph-stop');
+            stopVisualTimer();
+        }
+    }
+
+    async function processAudio() {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = async () => {
+            const base64 = reader.result.split(',')[1];
+            try {
+                const sttRes = await fetch(CLOVA_SPEECH_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ audioBase64: base64, languageCode: "Kor" })
+                });
+                const sttData = await sttRes.json();
+                const userText = sttData.text;
+
+                if (!userText) { handleSttFailure(); return; }
+
+                addMessage('user', userText);
+                evaluateAnswer(userText);
+
+            } catch (e) { console.error(e); handleSttFailure(); }
+        };
+    }
+
+    function handleSttFailure() {
+        turnAttempts++;
+        if (turnAttempts >= 3) handleMaxAttempts();
+        else {
+            addHint("잘 못 들었어요. 다시 말해 주세요.<br><span class='text-sm text-gray-500'>(Je n'ai pas bien entendu. Répétez s'il vous plaît.)</span>");
+            playAudio(AUDIO_ASSETS.RECOG_FAIL);
+            setTimeout(() => { startUserWindow(); }, 1500);
+        }
+    }
+
+    async function evaluateAnswer(text) {
+        const turn = TURNS[currentTurnIndex];
+        try {
+            // New Format: Send messages array to the backend
+            const messages = [
+                { role: 'system', content: [{ type: 'text', text: turn.aiInstruction }] },
+                { role: 'user', content: [{ type: 'text', text: text }] }
+            ];
+
+            const aiRes = await fetch(CLOVA_STUDIO_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages }) 
+            });
+            
+            // Detailed Error Handling for Debugging
+            if(!aiRes.ok) {
+                const errorText = await aiRes.text();
+                console.error("[Eval] Backend Error:", errorText);
+                throw new Error(`Studio API Failed: ${aiRes.status} ${aiRes.statusText} - ${errorText}`);
+            }
+
+            const aiData = await aiRes.json(); 
+            const aiOutput = aiData.result || "";
+
+            let resultType = "wrong answer"; 
+            if (aiOutput.toLowerCase().includes("[correct]")) resultType = "correct";
+            else if (aiOutput.toLowerCase().includes("[wrong politeness]")) resultType = "politeness";
+            else if (aiOutput.toLowerCase().includes("[wrong situation]")) resultType = "situation";
+            else if (aiOutput.toLowerCase().includes("[wrong question]")) resultType = "question";
+            
+            handleResult(resultType);
+
+        } catch (e) {
+            console.warn("[Eval] Exception caught:", e);
+            statusText.innerText = "Veuillez contacter le développeur";
+            turnAttempts++;
+            if (turnAttempts >= 3) handleMaxAttempts();
+            else setTimeout(() => { startUserWindow(); }, 1500);
+        }
+    }
+
+    function handleResult(type) {
+        const turn = TURNS[currentTurnIndex];
+
+        if (type === "correct") {
+            let points = 0;
+            if (turnAttempts === 0) points = 30;
+            else if (turnAttempts === 1) points = 20;
+            else if (turnAttempts === 2) points = 10;
+            updateScore(points);
+            
+            if (turn.successText) addMessage('agent', turn.successText);
+
+            if (turn.successAudio) {
+                playAudio(turn.successAudio, nextTurn);
+            } else {
+                if (currentTurnIndex === 4) showTerminerButton();
+                else setTimeout(nextTurn, 1500);
+            }
+        } else {
+            turnAttempts++;
+            if (turnAttempts >= 3) {
+                handleMaxAttempts();
+            } else {
+                let hintMsg = "";
+                if (type === 'politeness') hintMsg = turn.hintPolite;
+                else if (type === 'situation') hintMsg = turn.hintSit;
+                else hintMsg = turn.hintWrong;
+                if (!hintMsg) hintMsg = "다시 대답해 보세요.<br><span class='text-sm text-gray-500'>(Réessayez.)</span>";
+
+                addHint(hintMsg);
+                
+                setTimeout(() => { startUserWindow(); }, 2000);
+            }
+        }
+    }
+
+    function handleMaxAttempts() {
+         const turn = TURNS[currentTurnIndex];
+         if (turn.forceQuitText) addMessage('agent', turn.forceQuitText);
+         
+         playAudio(AUDIO_ASSETS.TIMEOUT_MOVE_ON, () => {
+             if (currentTurnIndex === 4) showTerminerButton();
+             else nextTurn();
+         });
+    }
+
+    function nextTurn() {
+        currentTurnIndex++;
+        if (currentTurnIndex < TURNS.length) {
+            playSound('page_turn');
+            runTurn();
+        } else {
+            showTerminerButton();
+        }
+    }
+
+    function showTerminerButton() {
+        playSound('complete');
+        controlPanelContent.innerHTML = `<button onclick="startQuiz()" class="btn-terminer text-fluid-base">Terminer <i class="ph-bold ph-check-circle ml-2"></i></button>`;
+    }
+
+    // --- Quiz Logic ---
+    function startQuiz() {
+        playSound('page_turn');
+        pageChat.classList.add('hidden'); // Use !important hidden
+        pageQuiz.classList.remove('hidden'); 
+        renderQuiz();
+    }
+
+    function renderQuiz() {
+        if (currentQuizIndex >= QUIZZES.length) {
+            finishLesson();
+            return;
+        }
+        const qData = QUIZZES[currentQuizIndex];
+        const container = document.getElementById('quiz-options');
+        document.getElementById('quiz-question').innerText = `Q${currentQuizIndex+1}. ${qData.q}`;
+        container.innerHTML = '';
+        qData.options.forEach((opt, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'quiz-option text-fluid-base';
+            btn.innerText = opt;
+            btn.onclick = () => handleQuizAnswer(idx);
+            container.appendChild(btn);
+        });
+    }
+
+    function handleQuizAnswer(idx) {
+        const qData = QUIZZES[currentQuizIndex];
+        if (idx === qData.correct) updateScore(10); 
+        currentQuizIndex++;
+        playSound('page_turn');
+        renderQuiz();
+    }
+
+    function finishLesson() {
+        playSound('complete');
+        window.parent.postMessage({ type: 'lesson_complete', score: totalScore }, '*');
+        pageQuiz.classList.add('hidden');
+        document.getElementById('page-outro').classList.remove('hidden');
+        document.getElementById('final-score').innerText = `${totalScore}/180`;
+    }
+
+    // --- Helpers ---
+    function togglePause() {
+        if (isPaused) {
+            resumeGame();
+        } else {
+            pauseGame();
+        }
+    }
+
+    function pauseGame() {
+        isPaused = true;
+        pausedOverlay.classList.add('visible'); // Matches CSS
+        agentAudioPlayer.pause();
+        if (timerState.reqId) cancelAnimationFrame(timerState.reqId);
+        btnPause.innerHTML = '<i class="ph-fill ph-play text-lg"></i>';
+        btnPause.classList.add('active');
+    }
+
+    function resumeGame() {
+        isPaused = false;
+        pausedOverlay.classList.remove('visible'); // Matches CSS
+        if (agentAudioPlayer.src && agentAudioPlayer.paused && agentAudioPlayer.currentTime > 0) {
+             agentAudioPlayer.play().catch(e => console.log("Resume play err", e));
+        }
+        
+        if (timerState.remaining > 0 && timerState.callback) {
+            timerState.lastTick = performance.now();
+            timerState.reqId = requestAnimationFrame(timerLoop);
+        }
+        
+        btnPause.innerHTML = '<i class="ph-fill ph-pause text-lg"></i>';
+        btnPause.classList.remove('active');
+    }
+
+    function quitLesson() { totalScore = 0; finishLesson(); }
+    
+    function addMessage(sender, text) {
+        const div = document.createElement('div');
+        div.className = `bubble bubble-${sender}`; div.innerHTML = text;
+        if (sender === 'agent') {
+            const row = document.createElement('div');
+            row.className = 'agent-row';
+            // Male Avatar Seed Chase
+            row.innerHTML = `<img src="https://api.dicebear.com/9.x/avataaars/svg?seed=Chase" class="w-10 h-10 rounded-full border border-gray-200">`;
+            row.appendChild(div); chatHistory.appendChild(row);
+        } else { chatHistory.appendChild(div); }
+        document.getElementById('chat-wrapper').scrollTop = document.getElementById('chat-wrapper').scrollHeight;
+    }
+    function addHint(text) {
+        const div = document.createElement('div');
+        div.className = 'bubble bubble-hint'; div.innerHTML = text;
+        chatHistory.appendChild(div);
+        document.getElementById('chat-wrapper').scrollTop = document.getElementById('chat-wrapper').scrollHeight;
+    }
+    function enableMic() { btnMic.disabled = false; btnMic.classList.remove('idle'); btnMic.classList.add('ready'); }
+    function disableMic() { btnMic.disabled = true; btnMic.classList.remove('ready', 'recording'); btnMic.classList.add('idle'); stopVisualTimer(); }
+    function updateScore(points) { totalScore += points; scoreDisplay.innerText = `${totalScore} pts`; }
+    
+    function startVisualTimer(duration, onComplete) {
+        if (timerState.reqId) cancelAnimationFrame(timerState.reqId);
+        timerState.total = duration; timerState.remaining = duration;
+        timerState.callback = onComplete; timerState.lastTick = performance.now();
+        timerFill.style.width = '100%'; timerFill.style.transition = 'none'; void timerFill.offsetWidth;
+        timerState.reqId = requestAnimationFrame(timerLoop);
+    }
+    function timerLoop(now) {
+        if (isPaused) { timerState.lastTick = now; timerState.reqId = requestAnimationFrame(timerLoop); return; }
+        const delta = now - timerState.lastTick; timerState.lastTick = now;
+        timerState.remaining = Math.max(0, timerState.remaining - delta);
+        const pct = (timerState.remaining / timerState.total) * 100;
+        timerFill.style.width = `${pct}%`;
+        if (timerState.remaining <= 0) {
+            cancelAnimationFrame(timerState.reqId); timerState.reqId = null;
+            if (timerState.callback) timerState.callback();
+        } else { timerState.reqId = requestAnimationFrame(timerLoop); }
+    }
+    function stopVisualTimer() { if (timerState.reqId) cancelAnimationFrame(timerState.reqId); timerState.reqId = null; timerFill.style.width = '0%'; }
+
+</script>
+</body>
+</html>
