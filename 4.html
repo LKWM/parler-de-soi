@@ -614,8 +614,6 @@
     }
 
     function renderQuizSpeak(page) {
-        // Answer-reveal hint slot — pre-allocated with invisible class so the layout never shifts
-        const showHint = page.hint && page.hiddenHint && !pageStates[currentPage].passed && pageStates[currentPage].attemptsUsed >= 1;
         container.innerHTML = `
             <div class="page-wrapper fade-in">
                 <div class="flex flex-col items-center max-w-4xl w-full gap-[4vh]">
@@ -624,7 +622,6 @@
                         <i class="ph ph-question icon-fluid-lg opacity-80"></i>
                         <h2 class="text-fluid-lg font-bold leading-snug">${page.mainText}</h2>
                     </div>
-                    ${page.hint && page.hiddenHint ? `<div id="hint-slot" class="h-[3vh] flex items-center justify-center text-fluid-sm font-medium text-indigo-600 ${showHint ? '' : 'invisible'}">${page.hint}</div>` : ''}
                     <div class="flex flex-col items-center gap-[2vh]">
                         <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
                             <i class="ph ph-microphone icon-fluid-lg"></i>
@@ -871,9 +868,6 @@
                 } else {
                      msg = `<span class="text-orange-500 block mb-1">R\u00e9essayez. (${displayScore})</span>`;
                 }
-                // Révélation de l'indice (hiddenHint) — invisible = espace réservé, visible sur échec (pas de décalage)
-                const hintSlot = document.getElementById('hint-slot');
-                if (page.hint && page.hiddenHint && hintSlot) hintSlot.classList.remove('invisible');
             }
 
             if (transcript) {
