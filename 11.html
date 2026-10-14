@@ -418,12 +418,35 @@
         currentAudioObj = new Audio(src);
         const playPromise = currentAudioObj.play();
         if (playPromise !== undefined) {
-            playPromise.catch(e => { if(!e.message.includes('interrupted')) console.error("Play error:", e); });
+            playPromise.catch(e => { if(!e.message.includes('interrupted')) console.error("Play error:", e); if (onEndCallback) onEndCallback(); });
         }
         if (onEndCallback) {
             currentAudioObj.onended = onEndCallback;
         }
     }
+
+    // 오디오가 재생되는 동안 마이크 버튼을 잠그는 래퍼 함수 (8 phrases essentielles 마이크 차단 방식)
+    window.playAudioWithMicLock = function(url) {
+        const micBtn = document.getElementById('rec-btn');
+
+        // 이미 녹음 중이라면 오디오 재생 차단
+        if (micBtn && isRecording) return;
+
+        // 마이크 버튼 비활성화 시각 및 논리 처리
+        if (micBtn) {
+            micBtn.disabled = true;
+            micBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        playAudio(url, () => {
+            const btn = document.getElementById('rec-btn');
+            const st = pageStates[currentPage];
+            if (btn && !isRecording && !(st && st.passed)) {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        });
+    };
 
     // --- UI Logic ---
     const container = document.getElementById('content-area');
@@ -579,7 +602,7 @@
 
     function renderShadowing(page) {
         // Listen audio auto-play — 0.5s after page entry, once per entry
-        if (page.audioPrompt) { autoPlayTimer = setTimeout(() => { playAudio(page.audioPrompt); }, 500); }
+        if (page.audioPrompt) { autoPlayTimer = setTimeout(() => { const st = pageStates[currentPage]; (st && st.passed) ? playAudio(page.audioPrompt) : playAudioWithMicLock(page.audioPrompt); }, 500); }
 
         // [FIX] Changed page.displayOriginal to page.displayTranslation
         container.innerHTML = `
@@ -587,7 +610,7 @@
                 <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
                     <p class="text-gray-500 font-bold uppercase tracking-widest text-fluid-sm">${page.instruction}</p>
                     <div class="card-box py-[5vh] space-y-[2vh]">
-                        <button onclick="playAudio('${page.audioPrompt}')" class="mb-4 w-[8vh] h-[8vh] bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition shadow-sm mx-auto">
+                        <button onclick="playAudioWithMicLock('${page.audioPrompt}')" class="mb-4 w-[8vh] h-[8vh] bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition shadow-sm mx-auto">
                             <i class="ph ph-speaker-high icon-fluid-md"></i>
                         </button>
                         <h2 class="text-fluid-lg font-bold text-gray-800">${page.displayTranslation}</h2>
@@ -667,12 +690,12 @@
 
     function renderConversationReply(page) {
         // Listen audio auto-play — 0.5s after page entry, once per entry
-        if (page.audioPrompt) { autoPlayTimer = setTimeout(() => { playAudio(page.audioPrompt); }, 500); }
+        if (page.audioPrompt) { autoPlayTimer = setTimeout(() => { const st = pageStates[currentPage]; (st && st.passed) ? playAudio(page.audioPrompt) : playAudioWithMicLock(page.audioPrompt); }, 500); }
 
         container.innerHTML = `
             <div class="page-wrapper fade-in">
                 <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
-                    <button onclick="playAudio('${page.audioPrompt}')" class="flex items-center gap-2 px-[3vh] py-[1.5vh] bg-indigo-50 text-indigo-700 rounded-xl text-fluid-sm font-bold hover:bg-indigo-100 transition">
+                    <button onclick="playAudioWithMicLock('${page.audioPrompt}')" class="flex items-center gap-2 px-[3vh] py-[1.5vh] bg-indigo-50 text-indigo-700 rounded-xl text-fluid-sm font-bold hover:bg-indigo-100 transition">
                         <i class="ph ph-speaker-high text-lg"></i> Écouter la question
                     </button>
 
@@ -974,7 +997,7 @@
             const isExcludedFromHint = page.type === 'repeat' || page.type === 'shadowing' || page.type === 'conversation_reply';
             
             if ((!passed || forceFail) && page.audioPrompt && !isExcludedFromHint) {
-                 window.playHint = () => playAudio(page.audioPrompt);
+                 window.playHint = () => playAudioWithMicLock(page.audioPrompt);
                  msg += `<button onclick="playHint()" class="mt-2 flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs hover:bg-yellow-200 mx-auto transition"><i class="ph ph-speaker-high"></i> Réécouter</button>`;
             }
 

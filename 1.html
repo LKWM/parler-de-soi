@@ -438,7 +438,7 @@
         }
     }
 
-    function playAudio(src) {
+    function playAudio(src, onEndCallback) {
         stopCurrentAudio(); // Ensure cleanup before play
         if (!src) return;
         
@@ -447,7 +447,10 @@
             if (src.length === 0) return;
             
             const playSequence = (arr) => {
-                if (arr.length === 0) return;
+                if (arr.length === 0) {
+                    if (onEndCallback) onEndCallback();
+                    return;
+                }
                 currentAudioObj = new Audio(arr[0]);
                 const playPromise = currentAudioObj.play();
                 
@@ -459,6 +462,7 @@
                         } else {
                             console.error("Audio playback error:", e);
                         }
+                        if (onEndCallback) onEndCallback();
                     });
                 }
                 
@@ -483,9 +487,34 @@
                 } else {
                     console.error("Audio playback error:", e);
                 }
+                if (onEndCallback) onEndCallback();
             });
         }
+        if (onEndCallback) currentAudioObj.onended = onEndCallback;
     }
+
+    // 오디오가 재생되는 동안 마이크 버튼을 잠그는 래퍼 함수 (8 phrases essentielles 마이크 차단 방식)
+    window.playAudioWithMicLock = function(url) {
+        const micBtn = document.getElementById('rec-btn');
+
+        // 이미 녹음 중이라면 오디오 재생 차단
+        if (micBtn && isRecording) return;
+
+        // 마이크 버튼 비활성화 시각 및 논리 처리
+        if (micBtn) {
+            micBtn.disabled = true;
+            micBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        playAudio(url, () => {
+            const btn = document.getElementById('rec-btn');
+            const st = pageStates[currentPage];
+            if (btn && !isRecording && !(st && st.passed)) {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        });
+    };
     
     function playPageTurnSound() {
         if (pageTurnSynth) pageTurnSynth.triggerAttackRelease("C2", "32n");
@@ -665,7 +694,7 @@
             }, 1000);
         }
         // Listen audio auto-play — 0.5s after page entry, once per entry
-        if (page.cardAudio) { autoPlayTimer = setTimeout(() => { playAudio(page.cardAudio); }, 500); }
+        if (page.cardAudio) { autoPlayTimer = setTimeout(() => { const st = pageStates[currentPage]; (st && st.passed) ? playAudio(page.cardAudio) : playAudioWithMicLock(page.cardAudio); }, 500); }
 
         // Added speaker button for pronunciation practice
         container.innerHTML = `
@@ -675,7 +704,7 @@
                     <div class="card-box py-[5vh] space-y-[2vh]">
                         <div class="flex items-center justify-center gap-4">
                             <h2 class="text-fluid-xl font-bold text-indigo-900 korean-text">${page.mainText}</h2>
-                            <button onclick="playAudio('${page.cardAudio}')" class="w-[6vh] h-[6vh] bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition shadow-sm">
+                            <button onclick="playAudioWithMicLock('${page.cardAudio}')" class="w-[6vh] h-[6vh] bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition shadow-sm">
                                 <i class="ph ph-speaker-high text-xl"></i>
                             </button>
                         </div>
@@ -722,7 +751,7 @@
             <div class="page-wrapper fade-in">
                 <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
                     ${page.audioPrompt ? `
-                    <button onclick="playAudio('${page.audioPrompt}')" class="flex items-center gap-2 px-[3vh] py-[1.5vh] bg-indigo-50 text-indigo-700 rounded-xl text-fluid-sm font-bold hover:bg-indigo-100 transition">
+                    <button onclick="playAudioWithMicLock('${page.audioPrompt}')" class="flex items-center gap-2 px-[3vh] py-[1.5vh] bg-indigo-50 text-indigo-700 rounded-xl text-fluid-sm font-bold hover:bg-indigo-100 transition">
                         <i class="ph ph-speaker-high text-lg"></i> Écouter la question
                     </button>
                     ` : ''}
@@ -751,7 +780,7 @@
             <div class="page-wrapper fade-in">
                 <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
                     ${page.audioPrompt ? `
-                    <button onclick="playAudio('${page.audioPrompt}')" class="flex items-center gap-2 px-[3vh] py-[1.5vh] bg-indigo-50 text-indigo-700 rounded-xl text-fluid-sm font-bold hover:bg-indigo-100 transition">
+                    <button onclick="playAudioWithMicLock('${page.audioPrompt}')" class="flex items-center gap-2 px-[3vh] py-[1.5vh] bg-indigo-50 text-indigo-700 rounded-xl text-fluid-sm font-bold hover:bg-indigo-100 transition">
                         <i class="ph ph-speaker-high text-lg"></i> Écouter la question
                     </button>
                     ` : ''}

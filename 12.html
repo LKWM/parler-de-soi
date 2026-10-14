@@ -153,7 +153,35 @@
 <script>
     // --- Configuration ---
     const BASE_44_ORIGIN = "https://coreeno.base44.app"; 
-    const CLOVA_API_FUNCTION_URL = BASE_44_ORIGIN + '/api/functions/naverClovaSpeech';
+    const GEMINI_URL = 'https://coreeno.base44.app/functions/GeminiTransSecure';
+
+    // Permit reception from parent page (coreeno:permit postMessage)
+    let lessonPermit = null;
+    let lessonId = null;
+    window.addEventListener("message", (event) => {
+      if (event.data?.type !== "coreeno:permit") return;
+      lessonPermit = event.data.permit;
+      lessonId = event.data.lesson_id;
+    });
+    // Gemini 오류 안내 (원인별 프랑스어 문구)
+    let geminiErrorStreak = 0;
+    function geminiErrorMessage(error) {
+      const msg = (error && error.message) || String(error);
+      if (msg.indexOf('Lesson permit') !== -1) {
+        return "Permis d'acc\u00e8s indisponible. Veuillez actualiser la page et r\u00e9essayer.";
+      }
+      const m = msg.match(/API status: (\d+)/);
+      if (m) {
+        const status = parseInt(m[1], 10);
+        if (status === 401 || status === 403) return "Permis d'acc\u00e8s expir\u00e9. Veuillez actualiser la page et r\u00e9essayer.";
+        if (status === 429) return "Limite d'utilisation atteinte. Veuillez r\u00e9essayer dans quelques instants. Si l'erreur persiste, signalez un bug.";
+        if (status >= 500) return "Erreur du serveur. Veuillez r\u00e9essayer dans quelques instants. Si l'erreur persiste, signalez un bug.";
+        return "Erreur inattendue. Si le probl\u00e8me persiste, signalez un bug.";
+      }
+      geminiErrorStreak++;
+      if (geminiErrorStreak >= 2) return "Erreur de connexion. Si le probl\u00e8me persiste, signalez un bug.";
+      return "Erreur de connexion. Veuillez r\u00e9essayer.";
+    }
     const PLACEHOLDER_AUDIO = "";
 
     // Audio Resources
@@ -384,12 +412,35 @@
         currentAudioObj = new Audio(src);
         const playPromise = currentAudioObj.play();
         if (playPromise !== undefined) {
-            playPromise.catch(e => { if(!e.message.includes('interrupted')) console.error("Play error:", e); });
+            playPromise.catch(e => { if(!e.message.includes('interrupted')) console.error("Play error:", e); if (onEndCallback) onEndCallback(); });
         }
         if (onEndCallback) {
             currentAudioObj.onended = onEndCallback;
         }
     }
+
+    // 오디오가 재생되는 동안 마이크 버튼을 잠그는 래퍼 함수 (8 phrases essentielles 마이크 차단 방식)
+    window.playAudioWithMicLock = function(url) {
+        const micBtn = document.getElementById('rec-btn');
+
+        // 이미 녹음 중이라면 오디오 재생 차단
+        if (micBtn && isRecording) return;
+
+        // 마이크 버튼 비활성화 시각 및 논리 처리
+        if (micBtn) {
+            micBtn.disabled = true;
+            micBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        playAudio(url, () => {
+            const btn = document.getElementById('rec-btn');
+            const st = pageStates[currentPage];
+            if (btn && !isRecording && !(st && st.passed)) {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        });
+    };
 
     // --- UI Logic ---
     const container = document.getElementById('content-area');
@@ -533,6 +584,8 @@
     }
 
     function renderRepeat(page) {
+        // Listen audio auto-play — 0.5s after page entry, once per entry
+        if (page.cardAudio) { autoPlayTimer = setTimeout(() => { const st = pageStates[currentPage]; (st && st.passed) ? playAudio(page.cardAudio) : playAudioWithMicLock(page.cardAudio); }, 500); }
         container.innerHTML = `
             <div class="page-wrapper fade-in">
                 <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
@@ -540,7 +593,7 @@
                     <div class="card-box py-[5vh] space-y-[2vh]">
                         <div class="flex items-center justify-center gap-4">
                             <h2 class="text-fluid-xl font-bold text-indigo-900 korean-text">${page.mainText}</h2>
-                            <button onclick="playAudio('${page.cardAudio}')" class="w-[6vh] h-[6vh] bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition shadow-sm">
+                            <button onclick="playAudioWithMicLock('${page.cardAudio}')" class="w-[6vh] h-[6vh] bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition shadow-sm">
                                 <i class="ph ph-speaker-high text-xl"></i>
                             </button>
                         </div>
@@ -562,6 +615,8 @@
     function renderQuizAudioQuestion(page) {
         // Initially hide question text if not failed yet
         const showText = pageStates[currentPage].attemptsUsed >= (page.hintThreshold || 1);
+        // Listen audio auto-play — 0.5s after page entry, once per entry
+        if (page.audioCard) { autoPlayTimer = setTimeout(() => { const st = pageStates[currentPage]; (st && st.passed) ? playAudio(page.audioCard) : playAudioWithMicLock(page.audioCard); }, 500); }
         
         container.innerHTML = `
             <div class="page-wrapper fade-in">
@@ -569,7 +624,7 @@
                     <p class="text-gray-500 font-bold uppercase tracking-widest text-fluid-sm">${page.instruction}</p>
 
                     <div class="card-box py-[4vh] space-y-[2vh]">
-                         <button onclick="playAudio('${page.audioCard}')" class="mb-2 w-[8vh] h-[8vh] bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition shadow-sm mx-auto">
+                         <button onclick="playAudioWithMicLock('${page.audioCard}')" class="mb-2 w-[8vh] h-[8vh] bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition shadow-sm mx-auto">
                             <i class="ph ph-speaker-high icon-fluid-md"></i>
                         </button>
                         <!-- Question Text: Visible only after fail -->
@@ -723,30 +778,82 @@
         }
     }
 
+    const CHOSUNG = ['\u3131','\u3132','\u3134','\u3137','\u3138','\u3139','\u3141','\u3142','\u3143','\u3145','\u3146','\u3147','\u3148','\u3149','\u314a','\u314b','\u314c','\u314d','\u314f'];
+    const JUNGSUNG = ['\u314f','\u3150','\u3151','\u3152','\u3153','\u3154','\u3155','\u3156','\u3157','\u3158','\u3159','\u315a','\u315b','\u315c','\u315d','\u315e','\u315f','\u3160','\u3161','\u3162','\u3163'];
+    const JONGSUNG = ['','\u3131','\u3132','\u3133','\u3134','\u3135','\u3136','\u3137','\u3138','\u3139','\u313a','\u313b','\u313c','\u313d','\u313e','\u313f','\u3140','\u3141','\u3142','\u3144','\u3145','\u3146','\u3147','\u3148','\u314a','\u314b','\u314c','\u314d','\u314f','\u314e'];
+
+    function normalizeSpeech(s) {
+      return (s || '').replace(/[^\uac00-\ud7a3\u3131-\u3163A-Za-z0-9]/g, '');
+    }
+
+    function decomposeJamo(s) {
+      let out = '';
+      for (const ch of normalizeSpeech(s)) {
+        const code = ch.charCodeAt(0);
+        if (code >= 0xAC00 && code <= 0xD7A3) {
+          const base = code - 0xAC00;
+          out += CHOSUNG[Math.floor(base / 588)] + JUNGSUNG[Math.floor((base % 588) / 28)] + JONGSUNG[base % 28];
+        } else {
+          out += ch;
+        }
+      }
+      return out;
+    }
+
+    function levenshtein(a, b) {
+      const m = a.length, n = b.length;
+      if (m === 0) return n;
+      if (n === 0) return m;
+      let prev = Array.from({ length: n + 1 }, (_, i) => i);
+      let curr = new Array(n + 1);
+      for (let i = 1; i <= m; i++) {
+        curr[0] = i;
+        for (let j = 1; j <= n; j++) {
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+        }
+        [prev, curr] = [curr, prev];
+      }
+      return prev[n];
+    }
+
+    function jamoSimilarity(expected, actual) {
+      const e = decomposeJamo(expected), a = decomposeJamo(actual);
+      if (e.length === 0 && a.length === 0) return 100;
+      if (e.length === 0 || a.length === 0) return 0;
+      const dist = levenshtein(e, a);
+      return Math.round((1 - dist / Math.max(e.length, a.length)) * 100);
+    }
     async function processAudio(audioBase64, referenceTarget, feedbackEl, btnEl, forceFail = false) {
         if (!forceFail) feedbackEl.innerText = "Analyse...";
         
         let result = { text: "" };
-        let score = 0;
+        let score;
         let passed = false;
 
         try {
-            if (!forceFail && audioBase64) {
-                const payload = { audioBase64: audioBase64, languageCode: "Kor" };
-                // If referenceTarget is single string, send it.
-                if (typeof referenceTarget === 'string') {
-                    payload.referenceText = referenceTarget;
-                }
+                        if (!forceFail && audioBase64) {
+                if (!lessonPermit) throw new Error("Lesson permit is not available yet.");
 
-                const res = await fetch(CLOVA_API_FUNCTION_URL, {
+                const payload = {
+                    contents: [{
+                        role: "user",
+                        parts: [{ inline_data: { mime_type: "audio/webm", data: audioBase64 } }]
+                    }],
+                    permit: lessonPermit,
+                    lesson_id: lessonId
+                };
+
+                const res = await fetch(GEMINI_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
-                if (!res.ok) throw new Error("API Error");
-                result = await res.json();
-                score = result.assessment?.pronunciation_score;
+                if (!res.ok) throw new Error("API status: " + res.status);
+                const data = await res.json();
+                result = { text: (data.text || "").trim() };
+                geminiErrorStreak = 0;
             }
 
             const recognizedText = result.text || "";
@@ -761,13 +868,15 @@
                     const normalizedRec = normalize(recognizedText);
                     const matched = referenceTarget.some(ref => normalize(ref) === normalizedRec);
                     if (matched) passed = true;
+                    if (!matched) {
+                        score = Math.max(...referenceTarget.map(ref => jamoSimilarity(ref, recognizedText)));
+                    }
                 } else if (typeof referenceTarget === 'string') { 
-                    const scorePass = score >= 80;
-                    const textPass = recognizedText && normalize(recognizedText) === normalize(referenceTarget);
-                    if (scorePass && textPass) passed = true; 
+                    score = jamoSimilarity(referenceTarget, recognizedText);
+                    if (score >= 80) passed = true; 
                 } else { 
                     // Open ended
-                    if (recognizedText || score >= 0) passed = true; 
+                    if (recognizedText) passed = true; 
                 }
             }
 
@@ -806,12 +915,12 @@
             const hintThreshold = page.hintThreshold || 99; // Default high to ignore if not set
             if ((!passed || forceFail) && state.attemptsUsed >= hintThreshold) {
                  if (page.hintAudio) { // Single hint
-                     window.playHint = () => playAudio(page.hintAudio);
+                     window.playHint = () => playAudioWithMicLock(page.hintAudio);
                      msg += `<button onclick="playHint()" class="mt-2 flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs hover:bg-yellow-200 mx-auto transition"><i class="ph ph-speaker-high"></i> Indice</button>`;
                  } else if (page.hints) { // Multiple hints (Page 13)
                      msg += `<div class="flex gap-2 justify-center mt-2">`;
                      page.hints.forEach((h, idx) => {
-                         window[`playHint${idx}`] = () => playAudio(h.audio);
+                         window[`playHint${idx}`] = () => playAudioWithMicLock(h.audio);
                          msg += `<button onclick="playHint${idx}()" class="flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs hover:bg-yellow-200 transition"><i class="ph ph-speaker-high"></i> ${h.text}</button>`;
                      });
                      msg += `</div>`;
@@ -822,7 +931,7 @@
 
         } catch (e) {
             console.error(e);
-            feedbackEl.innerText = "API Error";
+            feedbackEl.innerText = geminiErrorMessage(e);
             if(btnEl) btnEl.disabled = false;
         }
     }
