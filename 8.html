@@ -437,6 +437,13 @@
         }
     }
 
+    // 피드백 슬롯 전환 (안내문 invisible, 결과 visible)
+    function showFeedbackSlot() {
+        const guide = document.getElementById('feedback-guide');
+        if (guide) guide.classList.add('invisible');
+        const fb = document.getElementById('feedback-msg');
+        if (fb) fb.classList.remove('invisible');
+    }
     function playAudio(src, onEndCallback) {
         stopCurrentAudio();
         stopRecording(null, true);

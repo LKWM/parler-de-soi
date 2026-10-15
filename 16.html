@@ -327,17 +327,8 @@
 <script>
     // --- Configuration ---
     const BASE_44_ORIGIN = "https://coreeno.base44.app"; 
-    const GEMINI_TRANSCRIBE_URL = BASE_44_ORIGIN + '/functions/GeminiTransSecure';
-    const GEMINI_EVAL_URL = BASE_44_ORIGIN + '/functions/GeminiChatSecure';
-
-    // Permit reception from parent page (coreeno:permit postMessage)
-    let lessonPermit = null;
-    let lessonId = null;
-    window.addEventListener("message", (event) => {
-      if (event.data?.type !== "coreeno:permit") return;
-      lessonPermit = event.data.permit;
-      lessonId = event.data.lesson_id;
-    });
+    const CLOVA_SPEECH_URL = BASE_44_ORIGIN + '/api/functions/naverClovaSpeech';
+    const CLOVA_STUDIO_URL = "https://coreeno.base44.app/api/apps/69021ec9e4512a451556d88d/functions/ClovaStudio"
 
     const AUDIO_ASSETS = {
         AGENT_HELLO: "https://res.cloudinary.com/de76i94ia/video/upload/v1767632992/Agent_1_xugd2x.mp3",
@@ -516,8 +507,10 @@
         initEffects().then(() => {
             playSound('page_turn');
             navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-                globalStream = stream;
-                globalStream.getTracks().forEach(track => track.enabled = false); // Stop holding mic
+                // Permission check only — release the mic immediately
+                // (mic is re-acquired at each user speaking turn)
+                stream.getTracks().forEach(track => track.stop());
+                globalStream = null;
                 document.getElementById('page-cover').classList.add('hidden');
                 document.getElementById('page-chat').classList.remove('hidden');
                 runTurn();
@@ -603,7 +596,9 @@
 
     function stopRecording() {
         if (mediaRecorder && isRecording) {
-            mediaRecorder.stream.getTracks().forEach(t => t.enabled = false);
+            // Release the mic completely when the user turn ends
+            mediaRecorder.stream.getTracks().forEach(t => t.stop());
+            if (globalStream) { globalStream.getTracks().forEach(t => t.stop()); globalStream = null; }
             mediaRecorder.stop();
             isRecording = false; canRecord = false;
             
@@ -620,19 +615,13 @@
         reader.onloadend = async () => {
             const base64 = reader.result.split(',')[1];
             try {
-                if (!lessonPermit) { addHint("Permis d'accès indisponible. Veuillez actualiser la page et réessayer."); statusText.innerText = ""; return; }
-                const sttRes = await fetch(GEMINI_TRANSCRIBE_URL, {
+                const sttRes = await fetch(CLOVA_SPEECH_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ role: "user", parts: [{ inline_data: { mime_type: "audio/webm", data: base64 } }] }],
-                        permit: lessonPermit,
-                        lesson_id: lessonId
-                    })
+                    body: JSON.stringify({ audioBase64: base64, languageCode: "Kor" })
                 });
-                if (!sttRes.ok) throw new Error("API status: " + sttRes.status);
                 const sttData = await sttRes.json();
-                const userText = (sttData.text || "").trim();
+                const userText = sttData.text;
 
                 if (!userText) { handleSttFailure(); return; }
 
@@ -657,16 +646,15 @@
         const turn = TURNS[currentTurnIndex];
         try {
             // New Format: Send messages array to the backend
-            const aiRes = await fetch(GEMINI_EVAL_URL, {
+            const messages = [
+                { role: 'system', content: [{ type: 'text', text: turn.aiInstruction }] },
+                { role: 'user', content: [{ type: 'text', text: text }] }
+            ];
+
+            const aiRes = await fetch(CLOVA_STUDIO_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    systemInstruction: turn.aiInstruction,
-                    contents: [{ role: "user", parts: [{ text: text }] }],
-                    model: "gemini-3.5-flash-lite",
-                    permit: lessonPermit,
-                    lesson_id: lessonId
-                })
+                body: JSON.stringify({ messages }) 
             });
             
             // Detailed Error Handling for Debugging
@@ -677,7 +665,7 @@
             }
 
             const aiData = await aiRes.json(); 
-            const aiOutput = (aiData.text || "").trim();
+            const aiOutput = aiData.result || "";
 
             let resultType = "wrong answer"; 
             if (aiOutput.toLowerCase().includes("[correct]")) resultType = "correct";

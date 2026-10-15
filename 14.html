@@ -423,6 +423,13 @@
         }
     }
 
+    // 피드백 슬롯 전환 (안내문 invisible, 결과 visible)
+    function showFeedbackSlot() {
+        const guide = document.getElementById('feedback-guide');
+        if (guide) guide.classList.add('invisible');
+        const fb = document.getElementById('feedback-msg');
+        if (fb) fb.classList.remove('invisible');
+    }
     function playAudio(src, onEndCallback) {
         stopCurrentAudio();
         stopRecording(null, true);
@@ -755,7 +762,7 @@
                     
                     <!-- Mic Button -->
                     <div class="flex flex-col items-center gap-[3vh] mt-[2vh]">
-                        <button id="rec-btn" class="w-[12vh] h-[12vh] bg-indigo-600 border-4 border-indigo-200 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-indigo-700 transition-all hover:scale-105">
+                        <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
                             <i class="ph ph-microphone icon-fluid-lg"></i>
                         </button>
                         <!-- Feedback Area -->
