@@ -153,7 +153,35 @@
 <script>
     // --- Configuration ---
     const BASE_44_ORIGIN = "https://coreeno.base44.app"; 
-    const CLOVA_API_FUNCTION_URL = BASE_44_ORIGIN + '/api/functions/naverClovaSpeech';
+    const GEMINI_URL = 'https://coreeno.base44.app/functions/GeminiChatSecure';
+
+    // Permit reception from parent page (coreeno:permit postMessage)
+    let lessonPermit = null;
+    let lessonId = null;
+    window.addEventListener("message", (event) => {
+      if (event.data?.type !== "coreeno:permit") return;
+      lessonPermit = event.data.permit;
+      lessonId = event.data.lesson_id;
+    });
+    // Gemini 오류 안내 (원인별 프랑스어 문구)
+    let geminiErrorStreak = 0;
+    function geminiErrorMessage(error) {
+      const msg = (error && error.message) || String(error);
+      if (msg.indexOf('Lesson permit') !== -1) {
+        return "Permis d'acc\u00e8s indisponible. Veuillez actualiser la page et r\u00e9essayer.";
+      }
+      const m = msg.match(/API status: (\d+)/);
+      if (m) {
+        const status = parseInt(m[1], 10);
+        if (status === 401 || status === 403) return "Permis d'acc\u00e8s expir\u00e9. Veuillez actualiser la page et r\u00e9essayer.";
+        if (status === 429) return "Limite d'utilisation atteinte. Veuillez r\u00e9essayer dans quelques instants. Si l'erreur persiste, signalez un bug.";
+        if (status >= 500) return "Erreur du serveur. Veuillez r\u00e9essayer dans quelques instants. Si l'erreur persiste, signalez un bug.";
+        return "Erreur inattendue. Si le probl\u00e8me persiste, signalez un bug.";
+      }
+      geminiErrorStreak++;
+      if (geminiErrorStreak >= 2) return "Erreur de connexion. Si le probl\u00e8me persiste, signalez un bug.";
+      return "Erreur de connexion. Veuillez r\u00e9essayer.";
+    }
     
     // Audio Resources
     const AUDIO = {
@@ -379,10 +407,41 @@
         stopRecording(null, true);
         if (!src) return;
         currentAudioObj = new Audio(src);
-        currentAudioObj.play().catch(e => { if(!e.message.includes('interrupted')) console.error("Play error:", e); });
+        currentAudioObj.play().catch(e => { if(!e.message.includes('interrupted')) console.error("Play error:", e); if (onEndCallback) onEndCallback(); });
         if (onEndCallback) {
             currentAudioObj.onended = onEndCallback;
         }
+    }
+
+    // 오디오가 재생되는 동안 마이크 버튼을 잠그는 래퍼 함수 (8 phrases essentielles 마이크 차단 방식)
+    window.playAudioWithMicLock = function(url) {
+        const micBtn = document.getElementById('rec-btn');
+
+        // 이미 녹음 중이라면 오디오 재생 차단
+        if (micBtn && isRecording) return;
+
+        // 마이크 버튼 비활성화 시각 및 논리 처리
+        if (micBtn) {
+            micBtn.disabled = true;
+            micBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        playAudio(url, () => {
+            const btn = document.getElementById('rec-btn');
+            const st = pageStates[currentPage];
+            if (btn && !isRecording && !(st && st.passed)) {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        });
+    };
+
+    // 피드백 슬롯 전환 (안내문 invisible, 결과 visible)
+    function showFeedbackSlot() {
+        const guide = document.getElementById('feedback-guide');
+        if (guide) guide.classList.add('invisible');
+        const fb = document.getElementById('feedback-msg');
+        if (fb) fb.classList.remove('invisible');
     }
 
     // --- UI Logic ---
@@ -457,7 +516,7 @@
              const feedback = document.getElementById('feedback-msg');
              const recBtn = document.getElementById('rec-btn');
              if(feedback && !feedback.innerHTML.includes("Excellent")) {
-                 feedback.insertAdjacentHTML('afterbegin', `<span class="text-green-500 font-bold block mb-1">Excellent !</span>`);
+                 showFeedbackSlot(); feedback.insertAdjacentHTML('afterbegin', `<span class="text-green-500 font-bold block mb-1">Excellent !</span>`);
              }
              if(recBtn) {
                  recBtn.disabled = true;
@@ -495,6 +554,8 @@
     }
 
     function renderRepeat(page) {
+        // Listen audio auto-play — 0.5s after page entry, once per entry
+        if (page.cardAudio) { autoPlayTimer = setTimeout(() => { const st = pageStates[currentPage]; (st && st.passed) ? playAudio(page.cardAudio) : playAudioWithMicLock(page.cardAudio); }, 500); }
         container.innerHTML = `
             <div class="page-wrapper fade-in">
                 <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
@@ -502,17 +563,17 @@
                     <div class="card-box py-[5vh] space-y-[2vh]">
                         <div class="flex items-center justify-center gap-4">
                             <h2 class="text-fluid-xl font-bold text-indigo-900 korean-text">${page.mainText}</h2>
-                            <button onclick="playAudio('${page.cardAudio}')" class="w-[6vh] h-[6vh] bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition shadow-sm">
+                            <button onclick="playAudioWithMicLock('${page.cardAudio}')" class="w-[6vh] h-[6vh] bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition shadow-sm">
                                 <i class="ph ph-speaker-high text-xl"></i>
                             </button>
                         </div>
                         ${page.sub1 ? `<span class="subtitle-1 text-fluid-sm">${page.sub1}</span>` : ''}
                     </div>
-                    <div class="flex flex-col items-center gap-[2vh]">
+                    <div class="flex flex-col items-center gap-[3vh]">
                         <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
                             <i class="ph ph-microphone icon-fluid-lg"></i>
                         </button>
-                        <div id="feedback-msg" class="h-[3vh] text-fluid-sm font-medium text-gray-500">Appuyez pour parler</div>
+                        <div class="grid justify-items-center items-start w-full min-h-[10vh]"><p id="feedback-guide" class="col-start-1 row-start-1 text-fluid-sm font-medium text-gray-500">Appuyez pour parler</p><div id="feedback-msg" class="col-start-1 row-start-1 w-full flex flex-col items-center justify-start text-fluid-sm font-medium text-gray-500 invisible"></div></div>
                     </div>
                 </div>
             </div>
@@ -542,6 +603,8 @@
     }
 
     function renderListeningChoice(page) {
+        // Listen audio auto-play — 0.5s after page entry, once per entry
+        if (page.audio) { autoPlayTimer = setTimeout(() => { playAudio(page.audio); }, 500); }
         const optionHtml = page.options.map(opt => `
             <button class="choice-btn w-full py-4 px-6 bg-gray-50 border-2 border-gray-200 rounded-xl text-lg font-semibold text-gray-700 hover:border-indigo-400 transition" onclick="checkChoice(this, '${opt}', '${page.correct.replace(/'/g, "\\'")}')">
                 ${opt}
@@ -588,11 +651,11 @@
                         <h2 class="text-fluid-lg font-bold text-gray-800">${page.displayOriginal}</h2>
                         <p class="text-fluid-xl font-bold text-indigo-900 korean-text">${page.displayKorean}</p>
                     </div>
-                    <div class="flex flex-col items-center gap-[2vh]">
+                    <div class="flex flex-col items-center gap-[3vh]">
                         <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
                             <i class="ph ph-microphone icon-fluid-lg"></i>
                         </button>
-                        <div id="feedback-msg" class="min-h-[3vh] text-fluid-sm font-medium text-gray-500 flex flex-col items-center justify-center">Appuyez pour parler</div>
+                        <div class="grid justify-items-center items-start w-full min-h-[10vh]"><p id="feedback-guide" class="col-start-1 row-start-1 text-fluid-sm font-medium text-gray-500">Appuyez pour parler</p><div id="feedback-msg" class="col-start-1 row-start-1 w-full flex flex-col items-center justify-start text-fluid-sm font-medium text-gray-500 invisible"></div></div>
                     </div>
                 </div>
             </div>
@@ -617,7 +680,7 @@
                                 <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-2">
                                     <i class="ph ph-user-circle text-2xl"></i>
                                 </div>
-                                <button onclick="playAudio('${page.replyAudio}')" class="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-2xl hover:bg-gray-200 transition text-gray-800 font-bold text-lg korean-text shadow-sm">
+                                <button onclick="playAudioWithMicLock('${page.replyAudio}')" class="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-2xl hover:bg-gray-200 transition text-gray-800 font-bold text-lg korean-text shadow-sm">
                                     <i class="ph ph-speaker-high text-indigo-500"></i>
                                     ${page.replyText}
                                 </button>
@@ -625,13 +688,11 @@
                         </div>
                     </div>
 
-                    <div class="flex flex-col items-center gap-[2vh]">
+                    <div class="flex flex-col items-center gap-[3vh]">
                         <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
                             <i class="ph ph-microphone icon-fluid-lg"></i>
                         </button>
-                        <div id="feedback-msg" class="min-h-[3vh] text-fluid-sm font-medium text-gray-500 flex flex-col items-center justify-center w-full">
-                            Appuyez pour parler
-                        </div>
+                        <div class="grid justify-items-center items-start w-full min-h-[10vh]"><p id="feedback-guide" class="col-start-1 row-start-1 text-fluid-sm font-medium text-gray-500">Appuyez pour parler</p><div id="feedback-msg" class="col-start-1 row-start-1 w-full flex flex-col items-center justify-start text-fluid-sm font-medium text-gray-500 invisible"></div></div>
                     </div>
                 </div>
             </div>
@@ -640,10 +701,12 @@
     }
 
     function renderConversationReply(page) {
+        // Listen audio auto-play — 0.5s after page entry, once per entry
+        if (page.audioPrompt) { autoPlayTimer = setTimeout(() => { const st = pageStates[currentPage]; (st && st.passed) ? playAudio(page.audioPrompt) : playAudioWithMicLock(page.audioPrompt); }, 500); }
         container.innerHTML = `
             <div class="page-wrapper fade-in">
                 <div class="flex flex-col items-center max-w-4xl w-full gap-[3vh]">
-                    <button onclick="playAudio('${page.audioPrompt}')" class="flex items-center gap-2 px-[3vh] py-[1.5vh] bg-indigo-50 text-indigo-700 rounded-xl text-fluid-sm font-bold hover:bg-indigo-100 transition">
+                    <button onclick="playAudioWithMicLock('${page.audioPrompt}')" class="flex items-center gap-2 px-[3vh] py-[1.5vh] bg-indigo-50 text-indigo-700 rounded-xl text-fluid-sm font-bold hover:bg-indigo-100 transition">
                         <i class="ph ph-speaker-high text-lg"></i> Écouter la question
                     </button>
 
@@ -653,13 +716,11 @@
                         <span class="text-fluid-lg font-bold text-gray-800 text-center">${page.displayHint}</span>
                     </div>
                     
-                    <div class="flex flex-col items-center gap-[2vh]">
+                    <div class="flex flex-col items-center gap-[3vh]">
                         <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
                             <i class="ph ph-microphone icon-fluid-lg"></i>
                         </button>
-                        <div id="feedback-msg" class="min-h-[3vh] text-fluid-sm font-medium text-gray-500 flex flex-col items-center justify-center w-full">
-                            Dites votre nom complet
-                        </div>
+                        <div class="grid justify-items-center items-start w-full min-h-[10vh]"><p id="feedback-guide" class="col-start-1 row-start-1 text-fluid-sm font-medium text-gray-500">Dites votre nom complet</p><div id="feedback-msg" class="col-start-1 row-start-1 w-full flex flex-col items-center justify-start text-fluid-sm font-medium text-gray-500 invisible"></div></div>
                     </div>
                 </div>
             </div>
@@ -718,7 +779,7 @@
 
         btn.onclick = async () => {
             if (attemptsMax && state.attemptsUsed >= attemptsMax && !state.passed) {
-                feedback.innerText = "Nombre de tentatives épuisé.";
+                feedback.innerHTML = `<span class="text-orange-500 block mb-1">Nombre de tentatives épuisé.</span>`;
                 resetNextButton();
                 // Special logic for Quiz 14 (Conv Start) to show reply even if failed
                 if (page.type === 'conversation_start') {
@@ -751,7 +812,7 @@
                     btn.classList.add('recording-pulse', 'bg-red-500', 'text-white', 'border-red-500');
                     btn.classList.remove('bg-white', 'text-indigo-600', 'border-gray-100');
                     btn.innerHTML = `<i class="ph ph-stop icon-fluid-md"></i>`;
-                    feedback.innerText = "Écoute en cours...";
+                    showFeedbackSlot(); feedback.innerText = "Écoute en cours...";
                     recordingTimeout = setTimeout(() => { if (isRecording) stopRecording(btn); }, 10000);
                 } catch (err) {
                     console.error("Mic Error:", err);
@@ -806,47 +867,103 @@
         return false;
     }
 
+    const CHOSUNG = ['\u3131','\u3132','\u3134','\u3137','\u3138','\u3139','\u3141','\u3142','\u3143','\u3145','\u3146','\u3147','\u3148','\u3149','\u314a','\u314b','\u314c','\u314d','\u314f'];
+    const JUNGSUNG = ['\u314f','\u3150','\u3151','\u3152','\u3153','\u3154','\u3155','\u3156','\u3157','\u3158','\u3159','\u315a','\u315b','\u315c','\u315d','\u315e','\u315f','\u3160','\u3161','\u3162','\u3163'];
+    const JONGSUNG = ['','\u3131','\u3132','\u3133','\u3134','\u3135','\u3136','\u3137','\u3138','\u3139','\u313a','\u313b','\u313c','\u313d','\u313e','\u313f','\u3140','\u3141','\u3142','\u3144','\u3145','\u3146','\u3147','\u3148','\u314a','\u314b','\u314c','\u314d','\u314f','\u314e'];
+
+    function normalizeSpeech(s) {
+      return (s || '').replace(/[^\uac00-\ud7a3\u3131-\u3163A-Za-z0-9]/g, '');
+    }
+
+    function decomposeJamo(s) {
+      let out = '';
+      for (const ch of normalizeSpeech(s)) {
+        const code = ch.charCodeAt(0);
+        if (code >= 0xAC00 && code <= 0xD7A3) {
+          const base = code - 0xAC00;
+          out += CHOSUNG[Math.floor(base / 588)] + JUNGSUNG[Math.floor((base % 588) / 28)] + JONGSUNG[base % 28];
+        } else {
+          out += ch;
+        }
+      }
+      return out;
+    }
+
+    function levenshtein(a, b) {
+      const m = a.length, n = b.length;
+      if (m === 0) return n;
+      if (n === 0) return m;
+      let prev = Array.from({ length: n + 1 }, (_, i) => i);
+      let curr = new Array(n + 1);
+      for (let i = 1; i <= m; i++) {
+        curr[0] = i;
+        for (let j = 1; j <= n; j++) {
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+        }
+        [prev, curr] = [curr, prev];
+      }
+      return prev[n];
+    }
+
+    function jamoSimilarity(expected, actual) {
+      const e = decomposeJamo(expected), a = decomposeJamo(actual);
+      if (e.length === 0 && a.length === 0) return 100;
+      if (e.length === 0 || a.length === 0) return 0;
+      const dist = levenshtein(e, a);
+      return Math.round((1 - dist / Math.max(e.length, a.length)) * 100);
+    }
     async function processAudio(audioBase64, referenceText, feedbackEl, btnEl, forceFail = false) {
         if (!forceFail) feedbackEl.innerText = "Analyse...";
         
         let result = { text: "" };
-        let score = 0;
+        let score;
         let passed = false;
 
         try {
-            if (!forceFail && audioBase64) {
-                const payload = { audioBase64: audioBase64, languageCode: "Kor" };
-                if (referenceText) payload.referenceText = referenceText;
+                        if (!forceFail && audioBase64) {
+                if (!lessonPermit) throw new Error("Lesson permit is not available yet.");
 
-                const res = await fetch(CLOVA_API_FUNCTION_URL, {
+                const payload = {
+                    contents: [{
+                        role: "user",
+                        parts: [{ inline_data: { mime_type: "audio/webm", data: audioBase64 } }]
+                    }],
+                    systemInstruction: "유저 발화를 한글로 전사하시오.",
+                    model: "gemini-3.5-flash-lite",
+                    permit: lessonPermit,
+                    lesson_id: lessonId
+                };
+
+                const res = await fetch(GEMINI_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
-                if (!res.ok) throw new Error("API Error");
-                result = await res.json();
-                score = result.assessment?.pronunciation_score;
+                if (!res.ok) throw new Error("API status: " + res.status);
+                const data = await res.json();
+                result = { text: (data.text || "").trim() };
+                geminiErrorStreak = 0;
             }
 
             const recognizedText = result.text || "";
             const page = pages[currentPage];
-            const displayScore = score !== undefined ? score : '-';
 
             // --- Validation Logic ---
             if (!forceFail) {
                 if (page.type === 'conversation_reply') {
                     passed = checkKoreanGrammar(recognizedText);
                 } else if (referenceText) { 
-                    const normalize = (str) => str ? str.replace(/[\s\.\,\?\!]/g, "") : "";
-                    const scorePass = score >= 80;
-                    const textPass = recognizedText && normalize(recognizedText) === normalize(referenceText);
-                    if (scorePass && textPass) passed = true; 
+                    // Standard Reference Check (jamo similarity, ChatSecure)
+                    score = jamoSimilarity(referenceText, recognizedText);
+                    if (score >= 80) passed = true; 
                 } else { 
                     if (recognizedText || score >= 0) passed = true; 
                 }
             }
 
+            const displayScore = score !== undefined ? score : '-';
             const state = pageStates[currentPage];
             let msg = "";
 
@@ -869,7 +986,7 @@
 
             } else {
                 if (state.attemptsUsed >= (page.attempts || 3) || forceFail) {
-                     msg = `<span class="text-orange-500 block mb-1">Nombre de tentatives épuisé.</span>`;
+                     msg = `<span class="text-orange-500 block mb-1">Tentatives épuisées. (${displayScore})</span>`;
                      resetNextButton();
                 } else {
                      msg = `<span class="text-orange-500 block mb-1">Réessayez. (${displayScore})</span>`;
@@ -884,7 +1001,7 @@
             const isExcludedFromHint = page.type === 'repeat' || page.type === 'conversation_reply';
             
             if ((!passed || forceFail) && page.audioPrompt && !isExcludedFromHint) {
-                 window.playHint = () => playAudio(page.audioPrompt);
+                 window.playHint = () => playAudioWithMicLock(page.audioPrompt);
                  msg += `<button onclick="playHint()" class="mt-2 flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs hover:bg-yellow-200 mx-auto transition"><i class="ph ph-speaker-high"></i> Réécouter</button>`;
             }
 
@@ -898,7 +1015,7 @@
 
         } catch (e) {
             console.error(e);
-            feedbackEl.innerText = "API Error";
+            feedbackEl.innerText = geminiErrorMessage(e);
             if(btnEl) btnEl.disabled = false;
         }
     }

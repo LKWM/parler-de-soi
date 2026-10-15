@@ -432,8 +432,17 @@
 <script>
     // --- Config & Assets ---
     const BASE_44_ORIGIN = "https://coreeno.base44.app"; 
-    const CLOVA_SPEECH_URL = BASE_44_ORIGIN + '/api/functions/naverClovaSpeech';
-    const CLOVA_STUDIO_URL = "https://coreeno.base44.app/api/apps/69021ec9e4512a451556d88d/functions/ClovaStudio"
+    const GEMINI_TRANSCRIBE_URL = BASE_44_ORIGIN + '/functions/GeminiTransSecure';
+    const GEMINI_EVAL_URL = BASE_44_ORIGIN + '/functions/GeminiChatSecure';
+
+    // Permit reception from parent page (coreeno:permit postMessage)
+    let lessonPermit = null;
+    let lessonId = null;
+    window.addEventListener("message", (event) => {
+      if (event.data?.type !== "coreeno:permit") return;
+      lessonPermit = event.data.permit;
+      lessonId = event.data.lesson_id;
+    });
 
     const AUDIO_ASSETS = {
         GREETING: "https://res.cloudinary.com/de76i94ia/video/upload/v1767417490/C1_S1_bs9ssk.mp3", 
@@ -774,13 +783,19 @@
         reader.onloadend = async () => {
             const base64 = reader.result.split(',')[1];
             try {
-                const sttRes = await fetch(CLOVA_SPEECH_URL, {
+                if (!lessonPermit) { addHint("Permis d'accès indisponible. Veuillez actualiser la page et réessayer."); statusText.innerText = ""; return; }
+                const sttRes = await fetch(GEMINI_TRANSCRIBE_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ audioBase64: base64, languageCode: "Kor" })
+                    body: JSON.stringify({
+                        contents: [{ role: "user", parts: [{ inline_data: { mime_type: "audio/webm", data: base64 } }] }],
+                        permit: lessonPermit,
+                        lesson_id: lessonId
+                    })
                 });
+                if (!sttRes.ok) throw new Error("API status: " + sttRes.status);
                 const sttData = await sttRes.json();
-                const userText = sttData.text;
+                const userText = (sttData.text || "").trim();
 
                 if (!userText) {
                     handleSttFailure(); 
@@ -821,27 +836,16 @@
         
         if (turn.type === 'ai_eval') {
             try {
-                const messages = [
-                    {
-                        role: 'system',
-                        content: [
-                            { type: 'text', text: turn.aiInstruction }
-                        ]
-                    },
-                    {
-                        role: 'user',
-                        content: [
-                             { type: 'text', text: text }
-                        ]
-                    }
-                ];
-
-                console.log(`[Eval] Sending to Studio: ${CLOVA_STUDIO_URL}`, messages);
-
-                const aiRes = await fetch(CLOVA_STUDIO_URL, {
+                const aiRes = await fetch(GEMINI_EVAL_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messages }) 
+                    body: JSON.stringify({
+                        systemInstruction: turn.aiInstruction,
+                        contents: [{ role: "user", parts: [{ text: text }] }],
+                        model: "gemini-3.5-flash-lite",
+                        permit: lessonPermit,
+                        lesson_id: lessonId
+                    })
                 });
                 
                 if(!aiRes.ok) {
@@ -853,12 +857,7 @@
                 const aiData = await aiRes.json(); 
                 console.log("[Eval] Received:", aiData);
 
-                if (aiData.error) {
-                    console.error("[Eval] Logic Error:", aiData.error, aiData.details);
-                    throw new Error(aiData.error);
-                }
-
-                const aiOutput = aiData.result; 
+                const aiOutput = (aiData.text || "").trim();
 
                 if (!aiOutput) throw new Error("Empty Studio Result");
                 

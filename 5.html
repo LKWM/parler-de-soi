@@ -445,22 +445,22 @@
 
     function renderChoice(page) {
         const optionHtml = page.options.map(opt => `
-            <button class="choice-btn w-full py-4 px-6 bg-gray-50 border-2 border-gray-200 rounded-xl text-lg font-semibold text-gray-700 hover:border-indigo-400 transition" onclick="checkChoice(this, '${opt}', '${page.correct.replace(/'/g, "\\'")}')">
+            <button class="choice-btn w-full py-[1.5vh] px-[3vh] bg-gray-50 border-2 border-gray-200 rounded-xl text-fluid-base font-semibold text-gray-700 hover:border-indigo-400 transition" onclick="checkChoice(this, '${opt}', '${page.correct.replace(/'/g, "\\'")}')">
                 ${opt}
             </button>
         `).join('');
 
         container.innerHTML = `
             <div class="page-wrapper fade-in">
-                <div class="card-box space-y-6 w-full max-w-xl">
-                    <div class="space-y-2">
-                        <p class="text-sm font-bold text-gray-400 uppercase tracking-wider">${page.instruction}</p>
+                <div class="card-box space-y-[2vh] w-full max-w-xl">
+                    <div class="space-y-[1vh]">
+                        <p class="text-fluid-sm font-bold text-gray-400 uppercase tracking-wider">${page.instruction}</p>
                         <h2 class="text-fluid-lg font-bold text-indigo-900 korean-text">${page.question}</h2>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-[1.5vmin] w-full">
                         ${optionHtml}
                     </div>
-                    <div id="feedback" class="h-8 font-bold"></div>
+                    <div id="feedback" class="min-h-[3vh] font-bold"></div>
                 </div>
             </div>
         `;
@@ -485,29 +485,29 @@
     function renderInput(page) {
         container.innerHTML = `
             <div class="page-wrapper fade-in w-full">
-                <div class="flex flex-col items-center gap-4 w-full max-w-2xl">
-                    <div class="card-box w-full space-y-4">
-                        <p class="text-sm font-bold text-gray-400 uppercase tracking-wider">${page.instruction}</p>
+                <div class="flex flex-col items-center gap-[3vh] w-full max-w-2xl">
+                    <div class="card-box w-full space-y-[1.5vh]">
+                        <p class="text-fluid-sm font-bold text-gray-400 uppercase tracking-wider">${page.instruction}</p>
                         <h2 class="text-fluid-lg font-bold text-gray-800">${page.question}</h2>
                         
                         <!-- Reduced padding for mobile input container -->
                         <div class="w-full bg-indigo-50 p-[3vmin] rounded-2xl border border-indigo-100">
-                            <p class="text-fluid-lg font-bold text-indigo-900 korean-text mb-4">${page.prompt}</p>
-                            <div class="flex gap-2">
+                            <p class="text-fluid-lg font-bold text-indigo-900 korean-text mb-[1.5vh]">${page.prompt}</p>
+                            <div class="flex gap-[1vmin]">
                                 <!-- inputmode="none" for mobile virtual keyboard use, standard type allowed for physical keyboard -->
                                 <input type="text" id="answer-input" inputmode="none" 
-                                    class="flex-grow p-3 rounded-lg border-2 border-gray-300 focus:border-indigo-500 outline-none text-center text-fluid-lg font-bold korean-text w-full min-w-0" 
+                                    class="flex-grow p-[1.5vh] rounded-lg border-2 border-gray-300 focus:border-indigo-500 outline-none text-center text-fluid-lg font-bold korean-text w-full min-w-0" 
                                     placeholder="Tapez ici..." autocomplete="off">
-                                <button onclick="checkInput('${page.correct.replace(/'/g, "\\'")}')" class="px-4 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 shrink-0">
+                                <button onclick="checkInput('${page.correct.replace(/'/g, "\\'")}')" class="px-[1.5vh] bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 shrink-0">
                                     <i class="ph ph-check text-xl"></i>
                                 </button>
                             </div>
                         </div>
-                        <div id="feedback" class="h-8 font-bold flex items-center justify-center gap-2"></div>
+                        <div id="feedback" class="min-h-[3vh] font-bold flex items-center justify-center gap-2"></div>
                     </div>
                     
                     <!-- Virtual Keyboard -->
-                    <div class="w-full bg-gray-200 p-2 md:p-4 rounded-xl shadow-inner">
+                    <div class="w-full bg-gray-200 p-[1vmin] md:p-[2vmin] rounded-xl shadow-inner">
                         ${renderKeyboard()}
                     </div>
                 </div>
@@ -654,7 +654,7 @@
         container.innerHTML = `
             <div class="page-wrapper fade-in">
                 <div class="flex flex-col items-center justify-center space-y-[4vh]">
-                    <div class="w-[15vh] h-[15vh] bg-green-100 rounded-full flex items-center justify-center mb-4 text-green-600 animate-bounce shadow-lg">
+                    <div class="w-[15vh] h-[15vh] bg-green-100 rounded-full flex items-center justify-center mb-[1.5vh] text-green-600 animate-bounce shadow-lg">
                         <i class="ph ph-check-fat icon-fluid-md"></i>
                     </div>
                     <h1 class="text-fluid-xl font-bold text-gray-800">Terminé !</h1>

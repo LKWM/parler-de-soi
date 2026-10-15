@@ -151,7 +151,7 @@
 <script>
     // --- Configuration ---
     const BASE_44_ORIGIN = "https://coreeno.base44.app"; 
-    const GEMINI_URL = 'https://coreeno.base44.app/functions/GeminiTransSecure';
+    const GEMINI_URL = 'https://coreeno.base44.app/functions/GeminiChatSecure';
 
     // Permit reception from parent page (coreeno:permit postMessage)
     let lessonPermit = null;
@@ -531,7 +531,7 @@
              const recBtn = document.getElementById('rec-btn');
              if(feedback) {
                  if(!feedback.innerHTML.includes("Excellent")) {
-                     feedback.insertAdjacentHTML('afterbegin', `<span class="text-green-500 font-bold block mb-1">Excellent !</span>`);
+                     showFeedbackSlot(); feedback.insertAdjacentHTML('afterbegin', `<span class="text-green-500 font-bold block mb-1">Excellent !</span>`);
                  }
              }
              if(recBtn) {
@@ -626,11 +626,11 @@
                         ${page.sub1 ? `<span class="subtitle-1 text-fluid-sm">${page.sub1}</span>` : ''}
                         <span class="subtitle-2 text-fluid-base">${page.sub2}</span>
                     </div>
-                    <div class="flex flex-col items-center gap-[2vh]">
+                    <div class="flex flex-col items-center gap-[3vh]">
                         <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
                             <i class="ph ph-microphone icon-fluid-lg"></i>
                         </button>
-                        <div id="feedback-msg" class="h-[3vh] text-fluid-sm font-medium text-gray-500">Appuyez pour parler</div>
+                        <div class="grid justify-items-center items-start w-full min-h-[10vh]"><p id="feedback-guide" class="col-start-1 row-start-1 text-fluid-sm font-medium text-gray-500">Appuyez pour parler</p><div id="feedback-msg" class="col-start-1 row-start-1 w-full flex flex-col items-center justify-start text-fluid-sm font-medium text-gray-500 invisible"></div></div>
                     </div>
                 </div>
             </div>
@@ -647,11 +647,11 @@
                         <i class="ph ph-question icon-fluid-lg opacity-80"></i>
                         <h2 class="text-fluid-lg font-bold leading-snug">${page.mainText}</h2>
                     </div>
-                    <div class="flex flex-col items-center gap-[2vh]">
+                    <div class="flex flex-col items-center gap-[3vh]">
                         <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
                             <i class="ph ph-microphone icon-fluid-lg"></i>
                         </button>
-                        <div id="feedback-msg" class="h-[3vh] text-fluid-sm font-medium text-gray-500">Appuyez pour répondre</div>
+                        <div class="grid justify-items-center items-start w-full min-h-[10vh]"><p id="feedback-guide" class="col-start-1 row-start-1 text-fluid-sm font-medium text-gray-500">Appuyez pour répondre</p><div id="feedback-msg" class="col-start-1 row-start-1 w-full flex flex-col items-center justify-start text-fluid-sm font-medium text-gray-500 invisible"></div></div>
                     </div>
                 </div>
             </div>
@@ -673,11 +673,11 @@
                         <span class="text-fluid-lg font-bold text-gray-800">${page.mainText}</span>
                         ${page.subKorean ? `<span class="text-fluid-base text-indigo-600 korean-text font-medium">${page.subKorean}</span>` : ''}
                     </div>
-                    <div class="flex flex-col items-center gap-[2vh]">
+                    <div class="flex flex-col items-center gap-[3vh]">
                         <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
                             <i class="ph ph-microphone icon-fluid-lg"></i>
                         </button>
-                        <div id="feedback-msg" class="h-[3vh] text-fluid-sm font-medium text-gray-500">Appuyez pour répondre</div>
+                        <div class="grid justify-items-center items-start w-full min-h-[10vh]"><p id="feedback-guide" class="col-start-1 row-start-1 text-fluid-sm font-medium text-gray-500">Appuyez pour répondre</p><div id="feedback-msg" class="col-start-1 row-start-1 w-full flex flex-col items-center justify-start text-fluid-sm font-medium text-gray-500 invisible"></div></div>
                     </div>
                 </div>
             </div>
@@ -765,7 +765,7 @@
                     btn.classList.add('recording-pulse', 'bg-red-500', 'text-white', 'border-red-500');
                     btn.classList.remove('bg-white', 'text-indigo-600', 'border-gray-100');
                     btn.innerHTML = `<i class="ph ph-stop icon-fluid-md"></i>`;
-                    feedback.innerText = "Écoute en cours...";
+                    showFeedbackSlot(); feedback.innerText = "Écoute en cours...";
                     recordingTimeout = setTimeout(() => { if (isRecording) stopRecording(btn); }, 10000);
                 } catch (err) {
                     console.error("Mic Error:", err);
@@ -850,6 +850,8 @@
                     role: "user",
                     parts: [{ inline_data: { mime_type: "audio/webm", data: audioBase64 } }]
                 }],
+                systemInstruction: "유저 발화를 한글로 전사하시오.",
+                model: "gemini-3.5-flash-lite",
                 permit: lessonPermit,
                 lesson_id: lessonId
             };

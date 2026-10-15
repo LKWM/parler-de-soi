@@ -153,7 +153,7 @@
 <script>
     // --- Configuration ---
     const BASE_44_ORIGIN = "https://coreeno.base44.app"; 
-    const GEMINI_URL = 'https://coreeno.base44.app/functions/GeminiTransSecure';
+    const GEMINI_URL = 'https://coreeno.base44.app/functions/GeminiChatSecure';
 
     // Permit reception from parent page (coreeno:permit postMessage)
     let lessonPermit = null;
@@ -520,7 +520,7 @@
              const feedback = document.getElementById('feedback-msg');
              const recBtn = document.getElementById('rec-btn');
              if(feedback && !feedback.innerHTML.includes("Excellent")) {
-                 feedback.insertAdjacentHTML('afterbegin', `<span class="text-green-500 font-bold block mb-1">Excellent !</span>`);
+                 showFeedbackSlot(); feedback.insertAdjacentHTML('afterbegin', `<span class="text-green-500 font-bold block mb-1">Excellent !</span>`);
              }
              if(recBtn) {
                  recBtn.disabled = true;
@@ -616,11 +616,11 @@
                         <h2 class="text-fluid-lg font-bold text-gray-800">${page.displayTranslation}</h2>
                         <p class="text-fluid-xl font-bold text-indigo-900 korean-text">${page.displayKorean}</p>
                     </div>
-                    <div class="flex flex-col items-center gap-[2vh]">
+                    <div class="flex flex-col items-center gap-[3vh]">
                         <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
                             <i class="ph ph-microphone icon-fluid-lg"></i>
                         </button>
-                        <div id="feedback-msg" class="h-[3vh] text-fluid-sm font-medium text-gray-500 flex flex-col items-center justify-center">Appuyez pour parler</div>
+                        <div class="grid justify-items-center items-start w-full min-h-[10vh]"><p id="feedback-guide" class="col-start-1 row-start-1 text-fluid-sm font-medium text-gray-500">Appuyez pour parler</p><div id="feedback-msg" class="col-start-1 row-start-1 w-full flex flex-col items-center justify-start text-fluid-sm font-medium text-gray-500 invisible"></div></div>
                     </div>
                 </div>
             </div>
@@ -638,11 +638,11 @@
                         <h2 class="text-fluid-lg font-bold text-gray-800">${page.displayTranslation}</h2>
                         <p class="text-fluid-xl font-bold text-indigo-900 korean-text">${page.displayKorean}</p>
                     </div>
-                    <div class="flex flex-col items-center gap-[2vh]">
+                    <div class="flex flex-col items-center gap-[3vh]">
                         <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
                             <i class="ph ph-microphone icon-fluid-lg"></i>
                         </button>
-                        <div id="feedback-msg" class="h-[3vh] text-fluid-sm font-medium text-gray-500 flex flex-col items-center justify-center">Appuyez pour parler</div>
+                        <div class="grid justify-items-center items-start w-full min-h-[10vh]"><p id="feedback-guide" class="col-start-1 row-start-1 text-fluid-sm font-medium text-gray-500">Appuyez pour parler</p><div id="feedback-msg" class="col-start-1 row-start-1 w-full flex flex-col items-center justify-start text-fluid-sm font-medium text-gray-500 invisible"></div></div>
                     </div>
                 </div>
             </div>
@@ -674,13 +674,13 @@
                         </div>
                     </div>
 
-                    <div class="flex flex-col items-center gap-[2vh]">
+                    <div class="flex flex-col items-center gap-[3vh]">
                         <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
                             <i class="ph ph-microphone icon-fluid-lg"></i>
                         </button>
-                        <div id="feedback-msg" class="h-[3vh] text-fluid-sm font-medium text-gray-500 flex flex-col items-center justify-center w-full">
+                        <div class="grid justify-items-center items-start w-full min-h-[10vh]"><p id="feedback-guide" class="col-start-1 row-start-1 text-fluid-sm font-medium text-gray-500">
                             Appuyez pour parler
-                        </div>
+                        </p><div id="feedback-msg" class="col-start-1 row-start-1 w-full flex flex-col items-center justify-start text-fluid-sm font-medium text-gray-500 invisible"></div></div>
                     </div>
                 </div>
             </div>
@@ -702,13 +702,13 @@
                     <!-- Instruction Removed Here -->
                     <!-- Empty box removed here -->
                     
-                    <div class="flex flex-col items-center gap-[2vh] mt-[5vh]"> <!-- Added margin top for spacing since box is gone -->
+                    <div class="flex flex-col items-center gap-[3vh] mt-[5vh]"> <!-- Added margin top for spacing since box is gone -->
                         <button id="rec-btn" class="w-[12vh] h-[12vh] bg-white border-4 border-gray-100 rounded-full flex items-center justify-center text-indigo-600 shadow-lg hover:border-indigo-200 transition-all hover:scale-105">
                             <i class="ph ph-microphone icon-fluid-lg"></i>
                         </button>
-                        <div id="feedback-msg" class="h-[3vh] text-fluid-sm font-medium text-gray-500 flex flex-col items-center justify-center w-full">
+                        <div class="grid justify-items-center items-start w-full min-h-[10vh]"><p id="feedback-guide" class="col-start-1 row-start-1 text-fluid-sm font-medium text-gray-500">
                             Répondez à la question
-                        </div>
+                        </p><div id="feedback-msg" class="col-start-1 row-start-1 w-full flex flex-col items-center justify-start text-fluid-sm font-medium text-gray-500 invisible"></div></div>
                     </div>
                 </div>
             </div>
@@ -767,7 +767,7 @@
 
         btn.onclick = async () => {
             if (attemptsMax && state.attemptsUsed >= attemptsMax && !state.passed) {
-                feedback.innerText = "Nombre de tentatives épuisé.";
+                feedback.innerHTML = `<span class="text-orange-500 block mb-1">Nombre de tentatives épuisé.</span>`;
                 resetNextButton();
                 // Special logic for Quiz 14 (Conv Start) to show reply even if failed
                 if (page.type === 'conversation_start') {
@@ -814,7 +814,7 @@
                 btn.classList.add('recording-pulse', 'bg-red-500', 'text-white', 'border-red-500');
                 btn.classList.remove('bg-white', 'text-indigo-600', 'border-gray-100');
                 btn.innerHTML = `<i class="ph ph-stop icon-fluid-md"></i>`;
-                feedback.innerText = "Écoute en cours...";
+                showFeedbackSlot(); feedback.innerText = "Écoute en cours...";
                 
                 if (recordingTimeout) clearTimeout(recordingTimeout);
                 recordingTimeout = setTimeout(() => { 
@@ -924,6 +924,8 @@
                         role: "user",
                         parts: [{ inline_data: { mime_type: "audio/webm", data: audioBase64 } }]
                     }],
+                    systemInstruction: "유저 발화를 한글로 전사하시오.",
+                    model: "gemini-3.5-flash-lite",
                     permit: lessonPermit,
                     lesson_id: lessonId
                 };
@@ -981,7 +983,7 @@
 
             } else {
                 if (state.attemptsUsed >= (page.attempts || 3) || forceFail) {
-                     msg = `<span class="text-orange-500 block mb-1">Nombre de tentatives épuisé.</span>`;
+                     msg = `<span class="text-orange-500 block mb-1">Tentatives épuisées. (${displayScore})</span>`;
                      resetNextButton();
                 } else {
                      msg = `<span class="text-orange-500 block mb-1">Réessayez. (${displayScore})</span>`;
