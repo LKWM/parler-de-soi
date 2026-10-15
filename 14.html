@@ -971,7 +971,6 @@
 
             const recognizedText = result.text || "";
             const page = pages[currentPage];
-            const displayScore = score !== undefined ? score : '-';
             const normalize = (str) => str ? str.replace(/[\s\.\,\?\!]/g, "") : "";
 
             // --- Validation Logic ---
@@ -992,6 +991,7 @@
                 }
             }
 
+            const displayScore = score !== undefined ? score : '-';
             const state = pageStates[currentPage];
             let msg = "";
 
@@ -1016,7 +1016,7 @@
             }
             
             if (recognizedText) {
-                msg += `<div class="text-indigo-800 font-medium mt-1 text-sm bg-indigo-50 px-3 py-1 rounded-lg">"${recognizedText}"</div>`;
+                msg += `<div class="text-indigo-600 font-medium mt-1 text-sm">"${recognizedText}"</div>`;
             }
 
             // Hint Logic 

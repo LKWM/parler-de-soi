@@ -917,7 +917,6 @@
 
             const recognizedText = result.text || "";
             const page = pages[currentPage];
-            const displayScore = score !== undefined ? score : '-';
 
             // --- Validation Logic ---
             if (!forceFail) {
@@ -934,6 +933,7 @@
                 }
             }
 
+            const displayScore = score !== undefined ? score : '-';
             const state = pageStates[currentPage];
             let msg = "";
 
