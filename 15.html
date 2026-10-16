@@ -734,7 +734,11 @@
                 mediaRecorder = new MediaRecorder(streamToUse);
                 audioChunks = [];
                 mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                mediaRecorder.onstop = processAudio;
+                mediaRecorder.onstop = function() {
+                    // Release the mic completely only AFTER the recorder has flushed its data
+                    if (globalStream) { globalStream.getTracks().forEach(t => t.stop()); globalStream = null; }
+                    processAudio();
+                };
                 
                 mediaRecorder.start();
                 isRecording = true;
@@ -761,9 +765,8 @@
 
     function stopRecording() {
         if (mediaRecorder && isRecording) {
-            // Release the mic completely when the user turn ends
-            mediaRecorder.stream.getTracks().forEach(track => track.stop());
-            if (globalStream) { globalStream.getTracks().forEach(t => t.stop()); globalStream = null; }
+            // Stop the recorder FIRST so the recorded audio is flushed (dataavailable);
+            // the mic is fully released afterwards in the onstop handler
             mediaRecorder.stop();
             
             isRecording = false;
@@ -830,9 +833,9 @@
              handleMaxAttempts();
         } else {
             addHint("잘 못 들었어요. 다시 말해 주세요.<br><span class='text-sm text-gray-500'>(Je n'ai pas bien entendu. Répétez s'il vous plaît.)</span>");
-            playAudio(AUDIO_ASSETS.REACTION_FAIL);
             statusText.innerText = "";
-            setTimeout(() => { startUserWindow(); }, 1000);
+            // Start the user window only AFTER the failure audio finishes
+            playAudio(AUDIO_ASSETS.REACTION_FAIL, () => { startUserWindow(); });
         }
     }
 
