@@ -1016,8 +1016,7 @@
                 }
             }
 
-            // Append transcription if it's the free speak section
-            if (pages[currentPage].type === 'free_speak' && recognizedText) {
+            if (recognizedText) {
                 messageContent += `<div class="text-indigo-600 font-medium mt-1 text-sm">"${recognizedText}"</div>`;
             }
             
