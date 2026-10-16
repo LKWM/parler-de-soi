@@ -629,14 +629,24 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        model: "gemini-3.5-transcribe",
                         contents: [{ role: "user", parts: [{ inline_data: { mime_type: "audio/webm", data: base64 } }] }],
+                        generationConfig: { transcriptionConfig: { languageCodes: ["ko-KR"] } },
                         permit: lessonPermit,
                         lesson_id: lessonId
                     })
                 });
                 if (!sttRes.ok) throw new Error("API status: " + sttRes.status);
                 const sttData = await sttRes.json();
-                const userText = (sttData.text || "").trim();
+                let userText = "";
+                if (sttData.raw && sttData.raw.candidates && sttData.raw.candidates[0] && sttData.raw.candidates[0].content && sttData.raw.candidates[0].content.parts) {
+                    for (const part of sttData.raw.candidates[0].content.parts) {
+                        if (part.audioTranscription && part.audioTranscription.text) userText += part.audioTranscription.text;
+                        else if (part.text) userText += part.text;
+                    }
+                }
+                if (!userText) userText = sttData.text || sttData.recognizedText || "";
+                userText = userText.trim();
 
                 if (!userText) { handleSttFailure(); return; }
 
