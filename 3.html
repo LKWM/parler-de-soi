@@ -888,15 +888,12 @@
       const dist = levenshtein(e, a);
       return Math.round((1 - dist / Math.max(e.length, a.length)) * 100);
     }
-    // 전사 지시문: 기대 정답값을 Reference text로 포함한다.
-    function buildTranscribeInstruction(reference) {
-        return `유저 발화를 한글로 전사한다.
-1. Filler words, stutters 삭제하고 실제 발화값만 전사.
-2. 문법, 발음 오류는 들리는 대로 전사.
-3. 발화를 하지 않는 구간이나 외국어로 발화하는 구간은 전사하지 않는다.
-4. 여러 소리 중 식별이 어려울 경우 Reference text를 참조.
-5. Reference text: ${reference || ""}`;
-    }
+    // 전사 지시문 (Reference 없음)
+    const TRANSCRIBE_INSTRUCTION = `유저의 한국어 발화를 전사한다.
+1. 한글 외에 다른 문자는 절대 사용할 수 없음.
+2. 발화를 하지 않는 구간이나 외국어로 발화하는 구간은 전사하지 않는다.
+3. 의미 없는 filler word나 말더듬기, 공백 등은 삭제하고 실제 단어나 문장만 전사한다.
+4. 문법, 발음 오류는 교정 없이 들리는 대로 전사한다.`;
 
     async function processAudio(audioBase64, referenceText, feedbackEl, btnEl, forceFail = false) {
         if (!forceFail) feedbackEl.innerText = "Analyse...";
@@ -914,8 +911,8 @@
                         role: "user",
                         parts: [{ inline_data: { mime_type: "audio/webm", data: audioBase64 } }]
                     }],
-                    systemInstruction: buildTranscribeInstruction(referenceText),
-                    model: "gemini-3.5-flash-lite",
+                    systemInstruction: TRANSCRIBE_INSTRUCTION,
+                    model: "gemini-3.8-flash",
                     permit: lessonPermit,
                     lesson_id: lessonId
                 };
